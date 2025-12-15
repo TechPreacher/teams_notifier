@@ -60,6 +60,30 @@ def main_page():
     alert.build()
 
 
+async def set_always_on_top():
+    """Set the window to always be on top after it's created."""
+    await asyncio.sleep(1.5)  # Wait for window to be fully ready
+    try:
+        # Use pywebview's on_top property
+        if app.native.main_window:
+            app.native.main_window.on_top = True
+            logger.info("Window set to always-on-top via pywebview")
+    except Exception as e:
+        logger.warning(f"Could not set always-on-top: {e}")
+    
+    # Periodically re-apply on_top to ensure it stays on top
+    async def keep_on_top():
+        while True:
+            await asyncio.sleep(5.0)
+            try:
+                if app.native.main_window:
+                    app.native.main_window.on_top = True
+            except Exception:
+                pass
+    
+    asyncio.create_task(keep_on_top())
+
+
 def run():
     """Run the Teams Notifier application."""
     global monitor, sound_player
@@ -83,13 +107,16 @@ def run():
     # Note: Menu bar disabled due to thread conflicts with NiceGUI native mode
     # The alert window itself provides all necessary controls
     
-    # Configure NiceGUI for small always-on-top window
+    # Set always-on-top after startup
+    app.on_startup(set_always_on_top)
+    
+    # Configure NiceGUI for small native window
     ui.run(
         port=port,
         title=config.window_title,
         reload=False,
         show=True,
-        native=True,  # Use native window for always-on-top
+        native=True,
         window_size=(config.window_width, config.window_height),
         frameless=False,
         fullscreen=False,
@@ -134,6 +161,9 @@ def run_demo():
         alert.build()
         # Start simulation
         asyncio.create_task(simulate_notifications())
+    
+    # Set always-on-top after startup
+    app.on_startup(set_always_on_top)
     
     ui.run(
         port=8080,

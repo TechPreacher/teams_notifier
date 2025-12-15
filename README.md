@@ -22,6 +22,8 @@ A macOS alert light application that monitors Microsoft Teams for new chat messa
 
 ## Installation
 
+### Option 1: Run from Source
+
 1. **Clone the repository** (if you haven't already):
    ```bash
    cd /path/to/Teams/Notifier
@@ -38,7 +40,36 @@ A macOS alert light application that monitors Microsoft Teams for new chat messa
    pip install -r requirements.txt
    ```
 
-4. **Grant permissions** (required for notification monitoring):
+4. **Run the app**:
+   ```bash
+   python -m src.main
+   ```
+
+### Option 2: Build macOS App Bundle
+
+Build a proper `.app` you can put in Applications or your Dock:
+
+```bash
+# One-time setup
+pip install pyinstaller
+
+# Build the app
+./build.sh
+
+# Install to Applications
+cp -r "dist/Teams Notifier.app" /Applications/
+
+# Or just run it directly
+open "dist/Teams Notifier.app"
+```
+
+### Option 3: Quick Launch Script
+
+Double-click `start.command` in Finder to launch without building.
+
+### Permissions Required
+
+Grant these permissions for notification monitoring:
    - Go to **System Settings** → **Privacy & Security** → **Accessibility**
    - Add your terminal app (Terminal.app, iTerm, or VS Code)
    - Also check **Notifications** → Ensure Teams has notifications enabled

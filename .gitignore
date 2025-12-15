@@ -419,3 +419,7 @@ FodyWeavers.xsd
 
 # Mac OS
 .DS_Store
+
+# Build and Dist folders
+build/
+dist/
