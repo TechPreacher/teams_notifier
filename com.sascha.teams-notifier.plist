@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.sascha.teams-notifier</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/sascha/Code/Local/Teams/Notifier/.venv/bin/python</string>
+        <string>-m</string>
+        <string>src.main</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/sascha/Code/Local/Teams/Notifier</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>/tmp/teams-notifier.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/teams-notifier.error.log</string>
+</dict>
+</plist>
