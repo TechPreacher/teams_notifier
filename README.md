@@ -124,6 +124,27 @@ color_mention: str = "#ef4444" # Red
 
 Place your own audio files in `resources/audio/` and update the paths in config. Supported formats: `.wav`, `.aiff`, `.mp3`
 
+### Webhook Notifications
+
+The app can send notifications to a webhook URL when alerts are triggered. Configure in `src/config.py`:
+
+```python
+# Webhook settings (set to None to disable)
+webhook_url: str | None = "https://hooks.zapier.com/hooks/catch/..."
+```
+
+When enabled, the app sends a POST request with this JSON payload:
+
+```json
+{
+  "type": "message",           // or "mention"
+  "timestamp": "2025-12-15T14:30:00.123456Z",
+  "source": "teams-notifier"
+}
+```
+
+This integrates with services like Zapier, Make, n8n, or any custom webhook endpoint.
+
 ### Notification Detection
 
 The app attempts to distinguish between:

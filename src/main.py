@@ -11,6 +11,7 @@ from .config import config
 from .monitors.notification_monitor import NotificationMonitor, NotificationType, TeamsNotification
 from .audio.sound_player import SoundPlayer
 from .ui.alert_window import AlertWindow, get_alert_window, AlertState
+from .webhook import WebhookSender
 
 # Configure logging
 logging.basicConfig(
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Global instances
 monitor: NotificationMonitor | None = None
 sound_player: SoundPlayer | None = None
+webhook_sender: WebhookSender | None = None
 
 
 def handle_notification(notification: TeamsNotification) -> None:
@@ -33,12 +35,16 @@ def handle_notification(notification: TeamsNotification) -> None:
         alert.notify_chat()
         if sound_player:
             sound_player.play_chat_sound()
+        if webhook_sender:
+            webhook_sender.send_notification_sync("message")
     
     elif notification.type == NotificationType.MENTION:
         logger.info("Mention notification received")
         alert.notify_mention()
         if sound_player:
             sound_player.play_mention_sound()
+        if webhook_sender:
+            webhook_sender.send_notification_sync("mention")
 
 
 def setup_signal_handlers() -> None:
@@ -86,7 +92,7 @@ async def set_always_on_top():
 
 def run():
     """Run the Teams Notifier application."""
-    global monitor, sound_player
+    global monitor, sound_player, webhook_sender
     
     logger.info("Starting Teams Notifier...")
     
@@ -95,6 +101,9 @@ def run():
     
     # Initialize components
     sound_player = SoundPlayer()
+    webhook_sender = WebhookSender(config.webhook_url)
+    if webhook_sender.enabled:
+        logger.info(f"Webhook notifications enabled: {config.webhook_url}")
     
     # Start notification monitor
     monitor = NotificationMonitor()
@@ -125,11 +134,14 @@ def run():
 
 def run_demo():
     """Run in demo mode with simulated notifications."""
-    global sound_player
+    global sound_player, webhook_sender
     
     logger.info("Starting Teams Notifier in DEMO mode...")
     
     sound_player = SoundPlayer()
+    webhook_sender = WebhookSender(config.webhook_url)
+    if webhook_sender.enabled:
+        logger.info(f"Webhook notifications enabled: {config.webhook_url}")
     
     async def simulate_notifications():
         """Simulate notifications for testing."""
@@ -149,11 +161,15 @@ def run_demo():
                 alert.notify_mention()
                 if sound_player:
                     sound_player.play_mention_sound()
+                if webhook_sender:
+                    webhook_sender.send_notification_sync("mention")
             else:
                 logger.info("[DEMO] Simulating chat notification")
                 alert.notify_chat()
                 if sound_player:
                     sound_player.play_chat_sound()
+                if webhook_sender:
+                    webhook_sender.send_notification_sync("message")
     
     @ui.page("/")
     def demo_page():

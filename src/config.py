@@ -33,6 +33,9 @@ class Config:
     # Animation speeds (in seconds)
     pulse_speed: float = 1.0
     flash_speed: float = 0.3
+    
+    # Webhook settings
+    webhook_url: str | None = "https://hooks.zapier.com/hooks/catch/25694751/ufp4wfh/"
 
 
 # Global config instance
