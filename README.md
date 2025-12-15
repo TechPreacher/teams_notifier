@@ -126,22 +126,41 @@ Place your own audio files in `resources/audio/` and update the paths in config.
 
 ### Webhook Notifications
 
-The app can send notifications to a webhook URL when alerts are triggered. Configure in `src/config.py`:
+The app can send notifications to a webhook URL when alerts are triggered. Configure by creating a `.env` file:
 
-```python
-# Webhook settings (set to None to disable)
-webhook_url: str | None = "https://hooks.zapier.com/hooks/catch/..."
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit with your webhook URL
 ```
+
+```dotenv
+# .env
+WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/your-id/your-hook/
+```
+
+Leave `WEBHOOK_URL` empty or remove it to disable webhooks.
+
+**For the bundled .app**, place the `.env` file in one of these locations (checked in order):
+1. Next to the `.app` bundle (e.g., `/Applications/.env` or `~/Desktop/.env`)
+2. `~/.config/teams-notifier/.env`
+3. `~/.teams-notifier.env`
 
 When enabled, the app sends a POST request with this JSON payload:
 
 ```json
 {
-  "type": "message",           // or "mention"
+  "type": "message",           // or "mention" or "clear"
   "timestamp": "2025-12-15T14:30:00.123456Z",
   "source": "teams-notifier"
 }
 ```
+
+The `type` field indicates the event:
+- `"message"` - New chat message received
+- `"mention"` - You were mentioned
+- `"clear"` - User pressed the Reset button
 
 This integrates with services like Zapier, Make, n8n, or any custom webhook endpoint.
 

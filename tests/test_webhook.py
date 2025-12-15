@@ -55,3 +55,25 @@ class TestWebhookSender:
         
         result = asyncio.get_event_loop().run_until_complete(run_test())
         assert result is True
+    
+    def test_send_notification_types(self):
+        """Test that all notification types can be sent."""
+        sender = WebhookSender("https://example.com/webhook")
+        
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+        
+        mock_session = MagicMock()
+        mock_session.post = MagicMock(return_value=mock_response)
+        mock_session.closed = False
+        
+        # Test all three notification types
+        for notification_type in ["message", "mention", "clear"]:
+            async def run_test(ntype=notification_type):
+                with patch.object(sender, '_get_session', return_value=mock_session):
+                    return await sender.send_notification(ntype)
+            
+            result = asyncio.get_event_loop().run_until_complete(run_test())
+            assert result is True, f"Failed for type: {notification_type}"

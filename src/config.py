@@ -1,7 +1,59 @@
 """Configuration settings for Teams Notifier."""
 
-from dataclasses import dataclass
+import os
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Literal
+
+from dotenv import load_dotenv
+
+
+def _find_and_load_dotenv() -> None:
+    """Find and load .env file from multiple possible locations."""
+    # Possible locations for .env file:
+    # 1. Next to the .app bundle (for macOS app)
+    # 2. In ~/.config/teams-notifier/
+    # 3. In user's home directory
+    # 4. Current working directory (development)
+    
+    possible_paths = []
+    
+    # If running as a bundled app, check next to the .app
+    if getattr(sys, 'frozen', False):
+        # Running as compiled app
+        app_dir = Path(sys.executable).parent.parent.parent.parent  # .app/Contents/MacOS/exe -> .app parent
+        possible_paths.append(app_dir / ".env")
+        possible_paths.append(app_dir / "teams-notifier.env")
+    
+    # Check ~/.config/teams-notifier/
+    config_dir = Path.home() / ".config" / "teams-notifier"
+    possible_paths.append(config_dir / ".env")
+    
+    # Check home directory
+    possible_paths.append(Path.home() / ".teams-notifier.env")
+    
+    # Check current working directory (development)
+    possible_paths.append(Path.cwd() / ".env")
+    
+    # Try each path
+    for env_path in possible_paths:
+        if env_path.exists():
+            load_dotenv(env_path)
+            return
+    
+    # Fall back to default load_dotenv behavior
+    load_dotenv()
+
+
+# Load environment variables from .env file
+_find_and_load_dotenv()
+
+
+def _get_webhook_url() -> str | None:
+    """Get webhook URL from environment variable."""
+    url = os.getenv("WEBHOOK_URL")
+    return url if url else None
 
 
 @dataclass
@@ -34,8 +86,8 @@ class Config:
     pulse_speed: float = 1.0
     flash_speed: float = 0.3
     
-    # Webhook settings - leave empty to disable
-    webhook_url: str | None = ""
+    # Webhook settings (loaded from WEBHOOK_URL environment variable)
+    webhook_url: str | None = field(default_factory=_get_webhook_url)
 
 
 # Global config instance

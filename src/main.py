@@ -63,6 +63,14 @@ def setup_signal_handlers() -> None:
 def main_page():
     """Main page with the alert light."""
     alert = get_alert_window()
+    
+    # Register webhook callback for reset/clear button
+    def on_reset():
+        if webhook_sender:
+            webhook_sender.send_notification_sync("clear")
+            logger.info("Clear notification sent to webhook")
+    
+    alert.on_reset(on_reset)
     alert.build()
 
 
@@ -174,6 +182,14 @@ def run_demo():
     @ui.page("/")
     def demo_page():
         alert = get_alert_window()
+        
+        # Register webhook callback for reset/clear button
+        def on_reset():
+            if webhook_sender:
+                webhook_sender.send_notification_sync("clear")
+                logger.info("[DEMO] Clear notification sent to webhook")
+        
+        alert.on_reset(on_reset)
         alert.build()
         # Start simulation
         asyncio.create_task(simulate_notifications())
