@@ -11,7 +11,6 @@ from .config import config
 from .monitors.notification_monitor import NotificationMonitor, NotificationType, TeamsNotification
 from .audio.sound_player import SoundPlayer
 from .ui.alert_window import AlertWindow, get_alert_window, AlertState
-from .ui.menu_bar import MenuBarManager
 
 # Configure logging
 logging.basicConfig(
@@ -23,7 +22,6 @@ logger = logging.getLogger(__name__)
 # Global instances
 monitor: NotificationMonitor | None = None
 sound_player: SoundPlayer | None = None
-menu_bar_manager: MenuBarManager | None = None
 
 
 def handle_notification(notification: TeamsNotification) -> None:
@@ -35,22 +33,12 @@ def handle_notification(notification: TeamsNotification) -> None:
         alert.notify_chat()
         if sound_player:
             sound_player.play_chat_sound()
-        if menu_bar_manager and menu_bar_manager.app:
-            menu_bar_manager.app.update_status("chat", alert.total_count)
     
     elif notification.type == NotificationType.MENTION:
         logger.info("Mention notification received")
         alert.notify_mention()
         if sound_player:
             sound_player.play_mention_sound()
-        if menu_bar_manager and menu_bar_manager.app:
-            menu_bar_manager.app.update_status("mention", alert.total_count)
-
-
-def handle_reset() -> None:
-    """Handle alert reset."""
-    if menu_bar_manager and menu_bar_manager.app:
-        menu_bar_manager.app.update_status("idle", 0)
 
 
 def setup_signal_handlers() -> None:
@@ -59,8 +47,6 @@ def setup_signal_handlers() -> None:
         logger.info("Shutting down...")
         if monitor:
             monitor.stop()
-        if menu_bar_manager:
-            menu_bar_manager.stop()
         sys.exit(0)
     
     signal.signal(signal.SIGINT, shutdown)
@@ -71,13 +57,12 @@ def setup_signal_handlers() -> None:
 def main_page():
     """Main page with the alert light."""
     alert = get_alert_window()
-    alert.on_reset(handle_reset)
     alert.build()
 
 
 def run():
     """Run the Teams Notifier application."""
-    global monitor, sound_player, menu_bar_manager
+    global monitor, sound_player
     
     logger.info("Starting Teams Notifier...")
     
@@ -92,19 +77,13 @@ def run():
     monitor.add_callback(handle_notification)
     monitor.start()
     
-    # Start menu bar app
     port = 8080
-    menu_bar_manager = MenuBarManager(port=port)
-    menu_bar_app = menu_bar_manager.start()
-    
-    # Connect reset callback
-    alert = get_alert_window()
-    menu_bar_app.set_reset_callback(alert.reset)
-    
     logger.info(f"Starting NiceGUI on port {port}...")
     
+    # Note: Menu bar disabled due to thread conflicts with NiceGUI native mode
+    # The alert window itself provides all necessary controls
+    
     # Configure NiceGUI for small always-on-top window
-    # Note: Always-on-top requires native window mode
     ui.run(
         port=port,
         title=config.window_title,

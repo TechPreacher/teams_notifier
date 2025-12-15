@@ -99,7 +99,15 @@ class NotificationMonitor:
                     logger.error(f"Callback error: {e}")
     
     def _parse_notification(self, data: dict) -> TeamsNotification:
-        """Parse raw notification data into a TeamsNotification."""
+        """Parse raw notification data into a TeamsNotification.
+        
+        Attempts to distinguish between:
+        - CHAT: Direct messages (1:1 or group chat)
+        - MENTION: @mentions in Teams channels
+        
+        Note: This detection is based on notification content patterns and may not
+        be 100% accurate as macOS notification metadata is limited.
+        """
         name = data.get("name", "") or ""
         obj = data.get("object", "") or ""
         user_info = data.get("userInfo", {}) or {}
@@ -121,23 +129,64 @@ class NotificationMonitor:
                 raw_data=data,
             )
         
-        # Determine notification type from content
-        # Check userInfo for clues about mention vs chat
-        notification_type = NotificationType.CHAT
+        # Log raw data for debugging (helps tune detection)
+        logger.debug(f"Teams notification raw data: {data}")
         
-        # Look for mention indicators in the notification
+        # Build searchable strings from notification content
         info_str = str(user_info).lower()
         name_str = name.lower()
+        combined = f"{info_str} {name_str}"
         
-        mention_keywords = ["mention", "@", "tagged", "replied"]
-        if any(kw in info_str or kw in name_str for kw in mention_keywords):
-            notification_type = NotificationType.MENTION
+        # Determine notification type based on content patterns
+        notification_type = self._classify_notification(combined, user_info)
         
         return TeamsNotification(
             type=notification_type,
             timestamp=datetime.now(),
             raw_data=data,
         )
+    
+    def _classify_notification(self, content: str, user_info: dict) -> NotificationType:
+        """Classify notification type based on content analysis.
+        
+        Channel mentions typically contain:
+        - "@" symbol or "mentioned" keyword
+        - Channel/team names
+        - "replied to" patterns
+        
+        Direct chats typically contain:
+        - Just sender name and message
+        - No channel indicators
+        """
+        # Strong indicators of a channel mention
+        mention_patterns = [
+            "@",                    # Direct @ mention
+            "mentioned",            # "mentioned you"
+            "replied to",           # Reply to your message
+            "replied in",           # Reply in thread
+            "tagged",               # Tagged in message
+            " in #",                # "mentioned you in #channel"
+            "channel",              # Channel notifications
+            "team:",                # Team name prefix
+        ]
+        
+        # Check for mention indicators
+        for pattern in mention_patterns:
+            if pattern in content:
+                logger.debug(f"Detected MENTION (pattern: '{pattern}')")
+                return NotificationType.MENTION
+        
+        # Check userInfo for specific keys that might indicate type
+        if user_info:
+            # These keys might exist in notification payload
+            info_keys = str(user_info.keys()).lower()
+            if any(k in info_keys for k in ["channel", "team", "mention"]):
+                logger.debug("Detected MENTION (from userInfo keys)")
+                return NotificationType.MENTION
+        
+        # Default to CHAT for direct messages
+        logger.debug("Classified as CHAT (no mention indicators found)")
+        return NotificationType.CHAT
     
     def start(self) -> None:
         """Start monitoring notifications."""

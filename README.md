@@ -75,9 +75,9 @@ Edit `src/config.py` to customize:
 window_width: int = 150
 window_height: int = 200
 
-# Sounds (use any .aiff file from /System/Library/Sounds/)
-chat_sound: str = "/System/Library/Sounds/Blow.aiff"
-mention_sound: str = "/System/Library/Sounds/Glass.aiff"
+# Sounds (relative paths from project root, or absolute paths)
+chat_sound: str = "resources/audio/GLaDOS-teams-message.wav"
+mention_sound: str = "resources/audio/GLaDOS-teams-mention.wav"
 
 # Animation speeds (seconds)
 pulse_speed: float = 1.0   # Yellow pulsing
@@ -88,6 +88,18 @@ color_idle: str = "#22c55e"    # Green
 color_chat: str = "#eab308"    # Yellow  
 color_mention: str = "#ef4444" # Red
 ```
+
+### Custom Audio Files
+
+Place your own audio files in `resources/audio/` and update the paths in config. Supported formats: `.wav`, `.aiff`, `.mp3`
+
+### Notification Detection
+
+The app attempts to distinguish between:
+- **Chat messages** (direct/group chat) → Yellow light + `GLaDOS-teams-message.wav`
+- **Channel mentions** (@mentions in teams/channels) → Red light + `GLaDOS-teams-mention.wav`
+
+Detection is based on notification content patterns (looking for "@", "mentioned", "channel", etc.). This works reasonably well but isn't 100% accurate due to macOS notification API limitations.
 
 ### Available System Sounds
 

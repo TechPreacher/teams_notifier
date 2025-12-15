@@ -16,9 +16,9 @@ class Config:
     # Alert settings
     auto_reset_seconds: int | None = None  # None = manual reset only
     
-    # Sound settings
-    chat_sound: str = "/System/Library/Sounds/Blow.aiff"
-    mention_sound: str = "/System/Library/Sounds/Glass.aiff"
+    # Sound settings (relative to project root)
+    chat_sound: str = "resources/audio/GLaDOS-teams-message.wav"
+    mention_sound: str = "resources/audio/GLaDOS-teams-mention.wav"
     sound_enabled: bool = True
     
     # Teams app bundle identifier

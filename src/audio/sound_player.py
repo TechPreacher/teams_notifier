@@ -9,6 +9,9 @@ from ..config import config
 
 logger = logging.getLogger(__name__)
 
+# Get project root directory (for resolving relative paths)
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
 
 class SoundPlayer:
     """Plays system sounds for notifications."""
@@ -35,14 +38,25 @@ class SoundPlayer:
         """Play sound for mention notification."""
         self._play_sound(config.mention_sound)
     
+    def _resolve_sound_path(self, sound_path: str) -> Path:
+        """Resolve sound path, handling both absolute and relative paths."""
+        path = Path(sound_path)
+        if path.is_absolute():
+            return path
+        # Resolve relative to project root
+        return PROJECT_ROOT / path
+    
     def _play_sound(self, sound_path: str) -> None:
         """Play a sound file using macOS afplay command."""
         if not self._enabled:
             return
         
+        # Resolve the path
+        resolved_path = self._resolve_sound_path(sound_path)
+        
         # Verify sound file exists
-        if not Path(sound_path).exists():
-            logger.warning(f"Sound file not found: {sound_path}")
+        if not resolved_path.exists():
+            logger.warning(f"Sound file not found: {resolved_path}")
             # Fall back to system beep
             self._system_beep()
             return
@@ -52,7 +66,7 @@ class SoundPlayer:
             with self._lock:
                 try:
                     subprocess.run(
-                        ["afplay", sound_path],
+                        ["afplay", str(resolved_path)],
                         check=True,
                         capture_output=True,
                     )
