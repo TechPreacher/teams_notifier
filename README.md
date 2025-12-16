@@ -22,7 +22,26 @@ A macOS alert light application that monitors Microsoft Teams for new chat messa
 
 ## Installation
 
-### Option 1: Run from Source
+### Option 1: Run from Source (using uv - Recommended)
+
+[uv](https://docs.astral.sh/uv/) is a fast Python package manager. This is the recommended way to run the project.
+
+1. **Install uv** (if you haven't already):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Clone the repository and enter the directory**:
+   ```bash
+   cd /path/to/teams-notifier
+   ```
+
+3. **Run the app** (uv will automatically create a venv and install dependencies):
+   ```bash
+   uv run python -m src.main
+   ```
+
+### Option 2: Run from Source (using pip)
 
 1. **Clone the repository** (if you haven't already):
    ```bash
@@ -45,15 +64,16 @@ A macOS alert light application that monitors Microsoft Teams for new chat messa
    python -m src.main
    ```
 
-### Option 2: Build macOS App Bundle
+### Option 3: Build macOS App Bundle
 
 Build a proper `.app` you can put in Applications or your Dock:
 
 ```bash
-# One-time setup
-pip install pyinstaller
+# Using uv (recommended)
+uv run --group dev ./build.sh
 
-# Build the app
+# Or using pip
+pip install pyinstaller
 ./build.sh
 
 # Install to Applications
@@ -63,7 +83,7 @@ cp -r "dist/Teams Notifier.app" /Applications/
 open "dist/Teams Notifier.app"
 ```
 
-### Option 3: Quick Launch Script
+### Option 4: Quick Launch Script
 
 Double-click `start.command` in Finder to launch without building.
 
@@ -162,6 +182,25 @@ The `type` field indicates the event:
 - `"mention"` - You were mentioned
 - `"clear"` - User pressed the Reset button
 
+**Testing webhooks with curl:**
+
+```bash
+# Test message notification
+curl -X POST "YOUR_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{"type": "message", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
+
+# Test mention notification
+curl -X POST "YOUR_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{"type": "mention", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
+
+# Test clear notification
+curl -X POST "YOUR_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -d '{"type": "clear", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
+```
+
 This integrates with services like Zapier, Make, n8n, or any custom webhook endpoint.
 
 ### Notification Detection
@@ -223,6 +262,47 @@ The app adds an icon to your menu bar:
 The native window mode may not work on all systems. Try running without native mode by editing `src/main.py` and setting `native=False` in `ui.run()`.
 
 ## Development
+
+### Setting up the Development Environment
+
+#### Using uv (Recommended)
+
+```bash
+# Install uv if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Sync dependencies (creates venv automatically)
+uv sync
+
+# Sync with dev dependencies (includes pyinstaller, pytest)
+uv sync --group dev
+
+# Run the app
+uv run python -m src.main
+
+# Run in demo mode
+uv run python -m src.main --demo
+
+# Run tests
+uv run pytest tests/
+
+# Build the macOS app bundle
+uv run --group dev ./build.sh
+```
+
+#### Using pip
+
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install dev dependencies
+pip install pyinstaller pytest
+```
 
 ### Project Structure
 

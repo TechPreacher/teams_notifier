@@ -85,16 +85,21 @@ class WebhookSender:
             return
         
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Schedule the coroutine to run
+            # Try to get the running loop (works in async context like NiceGUI)
+            try:
+                loop = asyncio.get_running_loop()
+                # We're in an async context, schedule the task
                 asyncio.create_task(self.send_notification(notification_type))
-            else:
-                # Run synchronously if no loop is running
-                loop.run_until_complete(self.send_notification(notification_type))
-        except RuntimeError:
-            # No event loop, create one
+                logger.debug(f"Scheduled webhook task for: {notification_type}")
+                return
+            except RuntimeError:
+                # No running loop, we're in sync context
+                pass
+            
+            # Fallback: run in new event loop
             asyncio.run(self.send_notification(notification_type))
+        except Exception as e:
+            logger.error(f"Failed to schedule webhook: {e}")
     
     async def close(self) -> None:
         """Close the aiohttp session."""
