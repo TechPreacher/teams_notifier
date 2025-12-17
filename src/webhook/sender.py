@@ -40,7 +40,7 @@ class WebhookSender:
         """Send a notification to the webhook.
         
         Args:
-            notification_type: Either "message" or "mention"
+            notification_type: Either "message" or "urgent"
             
         Returns:
             True if the webhook was sent successfully, False otherwise.
@@ -114,7 +114,7 @@ class WebhookSender:
         """Send a notification to the webhook (fire-and-forget from sync context).
         
         Args:
-            notification_type: Either "message", "mention", or "clear"
+            notification_type: Either "message", "urgent", or "clear"
         """
         if not self.enabled:
             return

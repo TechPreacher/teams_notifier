@@ -38,55 +38,43 @@ class TestLogStreamMonitor:
         
         assert monitor.NOTIFICATION_PATTERN.search(log_line) is None
     
-    def test_classify_notification_default_chat(self):
-        """Test that notifications default to CHAT type."""
+    def test_sound_pattern_matches(self):
+        """Test that the sound pattern matches Teams notification sounds."""
         monitor = LogStreamMonitor()
         
-        log_line = 'Some notification log line without mention indicators'
+        log_line = 'Playing notification sound { nam: a8_teams_basic_notification_r4_ping } for com.microsoft.teams2'
         
-        notification_type = monitor._classify_notification(log_line)
-        
-        assert notification_type == NotificationType.CHAT
+        match = monitor.SOUND_PATTERN.search(log_line)
+        assert match is not None
+        assert match.group(1) == 'a8_teams_basic_notification_r4_ping'
     
-    def test_classify_notification_mention_at_symbol(self):
-        """Test that @ symbol triggers MENTION classification."""
+    def test_classify_by_sound_basic_is_chat(self):
+        """Test that basic notification sounds are classified as CHAT."""
         monitor = LogStreamMonitor()
         
-        log_line = 'Notification with @username mention'
+        sound_names = [
+            'a8_teams_basic_notification_r4_ping',
+            'a4_teams_basic_notification_r4_tap',
+            '00_teams_basic_notification_r4_default',
+        ]
         
-        notification_type = monitor._classify_notification(log_line)
-        
-        assert notification_type == NotificationType.MENTION
+        for sound_name in sound_names:
+            notification_type = monitor._classify_by_sound(sound_name)
+            assert notification_type == NotificationType.CHAT, f"Expected CHAT for {sound_name}"
     
-    def test_classify_notification_mention_keyword(self):
-        """Test that 'mentioned' keyword triggers MENTION classification."""
+    def test_classify_by_sound_urgent_is_urgent(self):
+        """Test that urgent notification sounds are classified as URGENT."""
         monitor = LogStreamMonitor()
         
-        log_line = 'Someone mentioned you in a channel'
+        sound_names = [
+            'b2_teams_urgent_notification_r4_prioritize',
+            'b3_teams_urgent_notification_r4_escalate',
+            'b4_teams_urgent_notification_r4_alarm',
+        ]
         
-        notification_type = monitor._classify_notification(log_line)
-        
-        assert notification_type == NotificationType.MENTION
-    
-    def test_classify_notification_replied_to(self):
-        """Test that 'replied to' triggers MENTION classification."""
-        monitor = LogStreamMonitor()
-        
-        log_line = 'John replied to your message'
-        
-        notification_type = monitor._classify_notification(log_line)
-        
-        assert notification_type == NotificationType.MENTION
-    
-    def test_classify_notification_channel(self):
-        """Test that 'channel' keyword triggers MENTION classification."""
-        monitor = LogStreamMonitor()
-        
-        log_line = 'New message in channel General'
-        
-        notification_type = monitor._classify_notification(log_line)
-        
-        assert notification_type == NotificationType.MENTION
+        for sound_name in sound_names:
+            notification_type = monitor._classify_by_sound(sound_name)
+            assert notification_type == NotificationType.URGENT, f"Expected URGENT for {sound_name}"
     
     def test_callback_registration(self):
         """Test callback registration and removal."""
@@ -145,6 +133,27 @@ class TestLogStreamMonitor:
         
         failing_callback.assert_called_once()
         working_callback.assert_called_once()
+    
+    def test_process_sound_then_notification(self):
+        """Test that sound line sets pending type for next notification."""
+        monitor = LogStreamMonitor()
+        callback = MagicMock()
+        monitor.add_callback(callback)
+        
+        # Process sound line first (urgent sound = URGENT type)
+        sound_line = 'Playing notification sound { nam: b2_teams_urgent_notification_r4_prioritize } for com.microsoft.teams2'
+        monitor._process_log_line(sound_line)
+        
+        assert monitor._pending_notification_type == NotificationType.URGENT
+        
+        # Then process notification line
+        notification_line = 'Queuing action present for app com.microsoft.teams2 items: ["ABC-123"]'
+        monitor._process_log_line(notification_line)
+        
+        # Should have dispatched an URGENT notification
+        callback.assert_called_once()
+        notification = callback.call_args[0][0]
+        assert notification.type == NotificationType.URGENT
 
 
 class TestTeamsNotification:
@@ -164,7 +173,7 @@ class TestTeamsNotification:
         """Test creating a notification with raw data."""
         raw = {"log_line": "test data"}
         notification = TeamsNotification(
-            type=NotificationType.MENTION,
+            type=NotificationType.URGENT,
             timestamp=datetime.now(),
             raw_data=raw,
         )
@@ -178,10 +187,10 @@ class TestNotificationType:
     def test_types_exist(self):
         """Test all expected types exist."""
         assert NotificationType.CHAT
-        assert NotificationType.MENTION
+        assert NotificationType.URGENT
         assert NotificationType.UNKNOWN
     
     def test_types_unique(self):
         """Test types are unique."""
-        types = [NotificationType.CHAT, NotificationType.MENTION, NotificationType.UNKNOWN]
+        types = [NotificationType.CHAT, NotificationType.URGENT, NotificationType.UNKNOWN]
         assert len(types) == len(set(types))

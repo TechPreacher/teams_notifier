@@ -70,7 +70,7 @@ class Config:
     
     # Sound settings (relative to project root)
     chat_sound: str = "resources/audio/GLaDOS-teams-message.wav"
-    mention_sound: str = "resources/audio/GLaDOS-teams-mention.wav"
+    urgent_sound: str = "resources/audio/GLaDOS-teams-urgent.wav"
     sound_enabled: bool = True
     
     # Teams app bundle identifier
@@ -80,7 +80,7 @@ class Config:
     # Colors (CSS format)
     color_idle: str = "#22c55e"  # Green
     color_chat: str = "#eab308"  # Yellow
-    color_mention: str = "#ef4444"  # Red
+    color_urgent: str = "#ef4444"  # Red
     
     # Animation speeds (in seconds)
     pulse_speed: float = 1.0

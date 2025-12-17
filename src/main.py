@@ -38,13 +38,13 @@ def handle_notification(notification: TeamsNotification) -> None:
         if webhook_sender:
             webhook_sender.send_notification_sync("message")
     
-    elif notification.type == NotificationType.MENTION:
-        logger.info("Mention notification received")
-        alert.notify_mention()
+    elif notification.type == NotificationType.URGENT:
+        logger.info("Urgent notification received")
+        alert.notify_urgent()
         if sound_player:
-            sound_player.play_mention_sound()
+            sound_player.play_urgent_sound()
         if webhook_sender:
-            webhook_sender.send_notification_sync("mention")
+            webhook_sender.send_notification_sync("urgent")
 
 
 def setup_signal_handlers() -> None:
@@ -164,13 +164,13 @@ def run_demo():
             await asyncio.sleep(delay)
             
             # Random notification type
-            if random.random() < 0.3:  # 30% chance of mention
-                logger.info("[DEMO] Simulating mention notification")
-                alert.notify_mention()
+            if random.random() < 0.3:  # 30% chance of urgent
+                logger.info("[DEMO] Simulating urgent notification")
+                alert.notify_urgent()
                 if sound_player:
-                    sound_player.play_mention_sound()
+                    sound_player.play_urgent_sound()
                 if webhook_sender:
-                    webhook_sender.send_notification_sync("mention")
+                    webhook_sender.send_notification_sync("urgent")
             else:
                 logger.info("[DEMO] Simulating chat notification")
                 alert.notify_chat()

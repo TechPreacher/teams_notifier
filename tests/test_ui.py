@@ -26,35 +26,35 @@ class TestAlertWindow:
         assert window.state == AlertState.CHAT
         assert window.total_count == 1
     
-    def test_notify_mention(self):
-        """Test mention notification changes state."""
+    def test_notify_urgent(self):
+        """Test urgent notification changes state."""
         window = AlertWindow()
         
         # Use internal method for testing
-        window._process_mention()
+        window._process_urgent()
         
-        assert window.state == AlertState.MENTION
+        assert window.state == AlertState.URGENT
         assert window.total_count == 1
     
-    def test_mention_overrides_chat(self):
-        """Test that mention state takes priority over chat."""
+    def test_urgent_overrides_chat(self):
+        """Test that urgent state takes priority over chat."""
         window = AlertWindow()
         
         window._process_chat()
         assert window.state == AlertState.CHAT
         
-        window._process_mention()
-        assert window.state == AlertState.MENTION
+        window._process_urgent()
+        assert window.state == AlertState.URGENT
     
-    def test_chat_does_not_override_mention(self):
-        """Test that chat does not override mention state."""
+    def test_chat_does_not_override_urgent(self):
+        """Test that chat does not override urgent state."""
         window = AlertWindow()
         
-        window._process_mention()
-        assert window.state == AlertState.MENTION
+        window._process_urgent()
+        assert window.state == AlertState.URGENT
         
         window._process_chat()
-        assert window.state == AlertState.MENTION  # Still mention
+        assert window.state == AlertState.URGENT  # Still urgent
         assert window.total_count == 2
     
     def test_reset(self):
@@ -62,7 +62,7 @@ class TestAlertWindow:
         window = AlertWindow()
         
         window._process_chat()
-        window._process_mention()
+        window._process_urgent()
         assert window.total_count == 2
         
         window.reset()
@@ -91,28 +91,28 @@ class TestAlertWindow:
         
         assert window.total_count == 3
         assert window._chat_count == 3
-        assert window._mention_count == 0
+        assert window._urgent_count == 0
     
     def test_mixed_notifications(self):
         """Test mixed notification types."""
         window = AlertWindow()
         
         window._process_chat()
-        window._process_mention()
+        window._process_urgent()
         window._process_chat()
         
         assert window.total_count == 3
         assert window._chat_count == 2
-        assert window._mention_count == 1
-        assert window.state == AlertState.MENTION
+        assert window._urgent_count == 1
+        assert window.state == AlertState.URGENT
     
     def test_notify_queues_notification(self):
-        """Test that notify_chat and notify_mention queue notifications."""
+        """Test that notify_chat and notify_urgent queue notifications."""
         window = AlertWindow()
         
         # These should queue notifications, not process immediately
         window.notify_chat()
-        window.notify_mention()
+        window.notify_urgent()
         
         # Queue should have 2 items
         assert window._notification_queue.qsize() == 2
@@ -125,9 +125,9 @@ class TestAlertState:
         """Test all expected states exist."""
         assert AlertState.IDLE
         assert AlertState.CHAT
-        assert AlertState.MENTION
+        assert AlertState.URGENT
     
     def test_states_unique(self):
         """Test states are unique."""
-        states = [AlertState.IDLE, AlertState.CHAT, AlertState.MENTION]
+        states = [AlertState.IDLE, AlertState.CHAT, AlertState.URGENT]
         assert len(states) == len(set(states))

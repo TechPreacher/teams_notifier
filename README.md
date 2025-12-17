@@ -1,15 +1,15 @@
 # Teams Notifier 🚨
 
-A macOS alert light application that monitors Microsoft Teams for new chat messages and mentions, providing visual and audio notifications.
+A macOS alert light application that monitors Microsoft Teams for new chat messages and urgent notifications, providing visual and audio notifications.
 
 ## Features
 
 - **Visual Alert Light** - A small, always-on-top window that looks like an alert light
   - 🟢 **Green** = All clear, no pending notifications
   - 🟡 **Yellow (pulsing)** = New chat message
-  - 🔴 **Red (flashing)** = You were mentioned
+  - 🔴 **Red (flashing)** = Urgent notification (mentions, priority messages)
 - **Notification Counter** - Shows the number of pending notifications
-- **Sound Alerts** - Different sounds for chat vs mention notifications
+- **Sound Alerts** - Different sounds for chat vs urgent notifications
 - **Menu Bar Icon** - Quick access from the macOS menu bar
 - **Reset Button** - Acknowledge notifications and return to idle state
 
@@ -111,7 +111,7 @@ python -m src.main --demo
 
 The app monitors macOS system logs for Teams notification events using `log stream`. When the NotificationCenter process receives a notification from Teams, this app detects it and:
 
-1. Determines if it's a chat message or mention
+1. Determines if it's a chat message or urgent notification (based on the sound Teams plays)
 2. Updates the visual alert light
 3. Plays the appropriate sound
 4. Updates the notification count
@@ -129,7 +129,7 @@ window_height: int = 200
 
 # Sounds (relative paths from project root, or absolute paths)
 chat_sound: str = "resources/audio/GLaDOS-teams-message.wav"
-mention_sound: str = "resources/audio/GLaDOS-teams-mention.wav"
+urgent_sound: str = "resources/audio/GLaDOS-teams-urgent.wav"
 
 # Animation speeds (seconds)
 pulse_speed: float = 1.0   # Yellow pulsing
@@ -138,7 +138,7 @@ flash_speed: float = 0.3   # Red flashing
 # Colors (CSS format)
 color_idle: str = "#22c55e"    # Green
 color_chat: str = "#eab308"    # Yellow  
-color_mention: str = "#ef4444" # Red
+color_urgent: str = "#ef4444" # Red
 ```
 
 ### Custom Audio Files
@@ -180,7 +180,7 @@ When enabled, the app sends a POST request with this JSON payload:
 
 The `type` field indicates the event:
 - `"message"` - New chat message received
-- `"mention"` - You were mentioned
+- `"urgent"` - Urgent notification (mention or priority message)
 - `"clear"` - User pressed the Reset button
 
 **Testing webhooks with curl:**
@@ -191,10 +191,10 @@ curl -X POST "YOUR_WEBHOOK_URL" \
   -H "Content-Type: application/json" \
   -d '{"type": "message", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
 
-# Test mention notification
+# Test urgent notification
 curl -X POST "YOUR_WEBHOOK_URL" \
   -H "Content-Type: application/json" \
-  -d '{"type": "mention", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
+  -d '{"type": "urgent", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
 
 # Test clear notification
 curl -X POST "YOUR_WEBHOOK_URL" \
@@ -206,11 +206,11 @@ This integrates with services like Zapier, Make, n8n, or any custom webhook endp
 
 ### Notification Detection
 
-The app attempts to distinguish between:
-- **Chat messages** (direct/group chat) → Yellow light + `GLaDOS-teams-message.wav`
-- **Channel mentions** (@mentions in teams/channels) → Red light + `GLaDOS-teams-mention.wav`
+The app detects notification types based on the sound Teams plays:
+- **Urgent sounds** (`b*_teams_urgent_notification_*`) → Red light (URGENT) + `GLaDOS-teams-urgent.wav`
+- **Basic sounds** (`a*_teams_basic_notification_*`) → Yellow light (CHAT) + `GLaDOS-teams-message.wav`
 
-Detection is based on notification content patterns (looking for "@", "mentioned", "channel", etc.). This works reasonably well but isn't 100% accurate due to macOS notification API limitations.
+This detection is reliable because Teams uses different sound categories for different notification priorities. Mentions and priority notifications use "urgent" sounds, while regular chat messages use "basic" sounds.
 
 ### Available System Sounds
 

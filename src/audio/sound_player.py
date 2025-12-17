@@ -34,9 +34,9 @@ class SoundPlayer:
         """Play sound for new chat message."""
         self._play_sound(config.chat_sound)
     
-    def play_mention_sound(self) -> None:
-        """Play sound for mention notification."""
-        self._play_sound(config.mention_sound)
+    def play_urgent_sound(self) -> None:
+        """Play sound for urgent notification."""
+        self._play_sound(config.urgent_sound)
     
     def _resolve_sound_path(self, sound_path: str) -> Path:
         """Resolve sound path, handling both absolute and relative paths."""
@@ -104,5 +104,5 @@ class SoundPlayer:
         self.play_chat_sound()
         time.sleep(1.5)
         
-        print("Testing mention sound...")
-        self.play_mention_sound()
+        print("Testing urgent sound...")
+        self.play_urgent_sound()

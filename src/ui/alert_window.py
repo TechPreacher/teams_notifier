@@ -17,7 +17,7 @@ class AlertState(Enum):
     """Visual states for the alert light."""
     IDLE = auto()
     CHAT = auto()
-    MENTION = auto()
+    URGENT = auto()
 
 
 class AlertWindow:
@@ -26,7 +26,7 @@ class AlertWindow:
     def __init__(self):
         self._state = AlertState.IDLE
         self._chat_count = 0
-        self._mention_count = 0
+        self._urgent_count = 0
         self._light_element = None
         self._count_label = None
         self._status_label = None
@@ -48,7 +48,7 @@ class AlertWindow:
     @property
     def total_count(self) -> int:
         """Total notification count."""
-        return self._chat_count + self._mention_count
+        return self._chat_count + self._urgent_count
     
     def on_reset(self, callback) -> None:
         """Register a callback for when reset is clicked."""
@@ -59,30 +59,30 @@ class AlertWindow:
         # Queue the notification for processing in the main thread
         self._notification_queue.put(('chat', None))
     
-    def notify_mention(self) -> None:
-        """Register a new mention notification (thread-safe)."""
+    def notify_urgent(self) -> None:
+        """Register a new urgent notification (thread-safe)."""
         # Queue the notification for processing in the main thread
-        self._notification_queue.put(('mention', None))
+        self._notification_queue.put(('urgent', None))
     
     def _process_chat(self) -> None:
         """Process a chat notification (must be called from main thread)."""
         self._chat_count += 1
-        # Only upgrade to CHAT if not already in MENTION state
+        # Only upgrade to CHAT if not already in URGENT state
         if self._state == AlertState.IDLE:
             self._set_state(AlertState.CHAT)
         self._update_display()
     
-    def _process_mention(self) -> None:
-        """Process a mention notification (must be called from main thread)."""
-        self._mention_count += 1
-        # MENTION always takes priority
-        self._set_state(AlertState.MENTION)
+    def _process_urgent(self) -> None:
+        """Process an urgent notification (must be called from main thread)."""
+        self._urgent_count += 1
+        # URGENT always takes priority
+        self._set_state(AlertState.URGENT)
         self._update_display()
     
     def reset(self) -> None:
         """Reset to idle state and clear counts."""
         self._chat_count = 0
-        self._mention_count = 0
+        self._urgent_count = 0
         self._set_state(AlertState.IDLE)
         self._update_display()
         
@@ -119,7 +119,7 @@ class AlertWindow:
                 # No event loop running (e.g., in tests)
                 self._light_on = True
                 self._update_light_color()
-        elif self._state == AlertState.MENTION:
+        elif self._state == AlertState.URGENT:
             # Flashing animation
             try:
                 self._animation_task = asyncio.create_task(self._flash_animation())
@@ -139,9 +139,9 @@ class AlertWindow:
             pass
     
     async def _flash_animation(self) -> None:
-        """Fast flashing animation for mentions."""
+        """Fast flashing animation for urgent notifications."""
         try:
-            while self._state == AlertState.MENTION:
+            while self._state == AlertState.URGENT:
                 self._light_on = not self._light_on
                 self._update_light_color()
                 await asyncio.sleep(config.flash_speed)
@@ -159,8 +159,8 @@ class AlertWindow:
             color = config.color_idle
         elif self._state == AlertState.CHAT:
             color = config.color_chat
-        elif self._state == AlertState.MENTION:
-            color = config.color_mention
+        elif self._state == AlertState.URGENT:
+            color = config.color_urgent
         else:
             color = config.color_idle
         
@@ -177,8 +177,8 @@ class AlertWindow:
                 self._status_label.set_text("All Clear")
             elif self._state == AlertState.CHAT:
                 self._status_label.set_text("New Chat!")
-            elif self._state == AlertState.MENTION:
-                self._status_label.set_text("Mentioned!")
+            elif self._state == AlertState.URGENT:
+                self._status_label.set_text("Urgent!")
         
         self._update_light_color()
     
@@ -228,7 +228,7 @@ class AlertWindow:
                         glow_color = "rgba(34, 197, 94, 0.5)"
                     elif self._state == AlertState.CHAT:
                         glow_color = "rgba(234, 179, 8, 0.6)"
-                    elif self._state == AlertState.MENTION:
+                    elif self._state == AlertState.URGENT:
                         glow_color = "rgba(239, 68, 68, 0.8)"
                     else:
                         glow_color = "rgba(34, 197, 94, 0.5)"
@@ -265,8 +265,8 @@ class AlertWindow:
                             notification_type, _ = self._notification_queue.get_nowait()
                             if notification_type == 'chat':
                                 self._process_chat()
-                            elif notification_type == 'mention':
-                                self._process_mention()
+                            elif notification_type == 'urgent':
+                                self._process_urgent()
                         except queue.Empty:
                             break
                 except Exception as e:

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class NotificationType(Enum):
     """Type of Teams notification."""
     CHAT = auto()
-    MENTION = auto()
+    URGENT = auto()
     UNKNOWN = auto()
 
 
@@ -42,6 +42,10 @@ class LogStreamMonitor:
     notification events using the `log stream` command. This approach works
     with the new Microsoft Teams app (com.microsoft.teams2) which uses the
     User Notifications framework.
+    
+    Notification type detection is based on the sound Teams plays:
+    - "urgent" sounds (b*_teams_urgent_notification_*) → MENTION
+    - "basic" sounds (a*_teams_basic_notification_*) → CHAT
     """
     
     # Pattern to match Teams notification events
@@ -51,21 +55,20 @@ class LogStreamMonitor:
         re.IGNORECASE
     )
     
-    # Pattern to extract notification content (if available)
-    CONTENT_PATTERN = re.compile(
-        r'addOrUpdate listItem:.*?from app com\.microsoft\.teams',
+    # Pattern to match notification sound being played
+    # Example: "Playing notification sound { nam: a8_teams_basic_notification_r4_ping } for com.microsoft.teams2"
+    SOUND_PATTERN = re.compile(
+        r'Playing notification sound \{ nam: ([^\s}]+) \} for com\.microsoft\.teams',
         re.IGNORECASE
     )
     
-    # Patterns that suggest a mention vs regular chat
-    MENTION_INDICATORS = [
-        r'@',
-        r'mentioned',
-        r'replied to',
-        r'replied in',
-        r'tagged',
-        r'channel',
-        r'team:',
+    # Sound patterns that indicate urgent/mention notifications
+    # Teams uses "urgent" sounds for mentions and priority notifications
+    URGENT_SOUND_PATTERNS = [
+        'urgent',           # b*_teams_urgent_notification_*
+        'prioritize',       # b2_teams_urgent_notification_r4_prioritize
+        'escalate',         # b3_teams_urgent_notification_r4_escalate
+        'alarm',            # b4_teams_urgent_notification_r4_alarm
     ]
     
     def __init__(self):
@@ -75,6 +78,7 @@ class LogStreamMonitor:
         self._thread: threading.Thread | None = None
         self._last_notification_time: datetime | None = None
         self._debounce_seconds = 1.0  # Ignore duplicate notifications within this window
+        self._pending_notification_type: NotificationType | None = None  # Track sound-based type
     
     def add_callback(self, callback: Callable[[TeamsNotification], None]) -> None:
         """Register a callback for Teams notifications."""
@@ -108,34 +112,46 @@ class LogStreamMonitor:
         self._last_notification_time = now
         return True
     
-    def _classify_notification(self, log_line: str) -> NotificationType:
-        """Classify notification type based on log content.
+    def _classify_by_sound(self, sound_name: str) -> NotificationType:
+        """Classify notification type based on the sound being played.
         
-        Note: The log stream doesn't always contain the notification content,
-        so we default to CHAT. The notification content patterns are checked
-        when available.
+        Teams uses different sound categories:
+        - "urgent" sounds (b*_teams_urgent_notification_*) for urgent/priority messages
+        - "basic" sounds (a*_teams_basic_notification_*) for regular chats
         """
-        log_lower = log_line.lower()
+        sound_lower = sound_name.lower()
         
-        # Check for mention indicators in the log line
-        for pattern in self.MENTION_INDICATORS:
-            if re.search(pattern, log_lower):
-                logger.debug(f"Detected MENTION (pattern: '{pattern}')")
-                return NotificationType.MENTION
+        # Check if this is an urgent/priority sound
+        for pattern in self.URGENT_SOUND_PATTERNS:
+            if pattern in sound_lower:
+                logger.debug(f"Detected URGENT sound (pattern: '{pattern}' in '{sound_name}')")
+                return NotificationType.URGENT
         
-        # Default to CHAT
+        # Default to CHAT for basic notification sounds
+        logger.debug(f"Detected CHAT sound: '{sound_name}'")
         return NotificationType.CHAT
     
     def _process_log_line(self, line: str) -> None:
         """Process a single log line and detect Teams notifications."""
+        # First, check if this is a sound being played (gives us the notification type)
+        sound_match = self.SOUND_PATTERN.search(line)
+        if sound_match:
+            sound_name = sound_match.group(1)
+            self._pending_notification_type = self._classify_by_sound(sound_name)
+            logger.debug(f"Sound detected: {sound_name} -> {self._pending_notification_type.name}")
+            return  # Sound line comes before/after the notification line
+        
         # Check if this is a Teams notification event
         if self.NOTIFICATION_PATTERN.search(line):
             logger.debug(f"Teams notification detected in log: {line[:200]}")
             
             if not self._should_process_notification():
+                self._pending_notification_type = None  # Clear pending type
                 return
             
-            notification_type = self._classify_notification(line)
+            # Use pending type from sound detection, or default to CHAT
+            notification_type = self._pending_notification_type or NotificationType.CHAT
+            self._pending_notification_type = None  # Reset for next notification
             
             notification = TeamsNotification(
                 type=notification_type,
