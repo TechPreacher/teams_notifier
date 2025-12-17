@@ -8,8 +8,10 @@ A macOS alert light application that monitors Microsoft Teams for new chat messa
   - 🟢 **Green** = All clear, no pending notifications
   - 🟡 **Yellow (pulsing)** = New chat message
   - 🔴 **Red (flashing)** = Urgent notification (mentions, priority messages)
+  - 🔵 **Dark Blue** = Muted (notifications still counted, but no sound/animation)
 - **Notification Counter** - Shows the number of pending notifications
 - **Sound Alerts** - Different sounds for chat vs urgent notifications
+- **Mute Button** - Toggle mute to silence sounds while still tracking notifications
 - **Menu Bar Icon** - Quick access from the macOS menu bar
 - **Reset Button** - Acknowledge notifications and return to idle state
 
@@ -138,7 +140,8 @@ flash_speed: float = 0.3   # Red flashing
 # Colors (CSS format)
 color_idle: str = "#22c55e"    # Green
 color_chat: str = "#eab308"    # Yellow  
-color_urgent: str = "#ef4444" # Red
+color_urgent: str = "#ef4444"  # Red
+color_muted: str = "#1e3a5f"   # Dark blue (when muted)
 ```
 
 ### Custom Audio Files

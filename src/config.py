@@ -87,7 +87,7 @@ class Config:
     
     # Window settings
     window_width: int = 150
-    window_height: int = 200
+    window_height: int = 260
     window_title: str = "Teams Alert"
     
     # Alert settings
@@ -96,6 +96,8 @@ class Config:
     # Sound settings (relative to project root)
     chat_sound: str = "resources/audio/GLaDOS-teams-message.wav"
     urgent_sound: str = "resources/audio/GLaDOS-teams-urgent.wav"
+    muted_sound: str = "resources/audio/GLaDOS-teams-muted.wav"
+    unmuted_sound: str = "resources/audio/GLaDOS-teams-unmuted.wav"
     sound_enabled: bool = True
     
     # Teams app bundle identifier
@@ -106,6 +108,10 @@ class Config:
     color_idle: str = "#22c55e"  # Green
     color_chat: str = "#eab308"  # Yellow
     color_urgent: str = "#ef4444"  # Red
+    color_muted: str = "#335d94"  # Dark blue (when muted)
+    
+    # Mute state
+    muted: bool = False
     
     # Animation speeds (in seconds)
     pulse_speed: float = 1.0

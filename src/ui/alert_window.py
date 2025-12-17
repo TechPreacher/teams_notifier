@@ -29,11 +29,14 @@ class AlertWindow:
         self._light_element = None
         self._count_label = None
         self._status_label = None
+        self._mute_button = None
         self._animation_task: asyncio.Task | None = None
         self._light_on = True
+        self._muted = config.muted
         
         # Callbacks for external events
         self._on_reset_callbacks: list = []
+        self._on_mute_callbacks: list = []
         
         # Thread-safe notification queue for cross-thread communication
         self._notification_queue: queue.Queue = queue.Queue()
@@ -49,9 +52,18 @@ class AlertWindow:
         """Total notification count."""
         return self._chat_count + self._urgent_count
     
+    @property
+    def muted(self) -> bool:
+        """Whether the app is muted."""
+        return self._muted
+    
     def on_reset(self, callback) -> None:
         """Register a callback for when reset is clicked."""
         self._on_reset_callbacks.append(callback)
+    
+    def on_mute(self, callback) -> None:
+        """Register a callback for when mute is toggled."""
+        self._on_mute_callbacks.append(callback)
     
     def notify_chat(self) -> None:
         """Register a new chat notification (thread-safe)."""
@@ -91,6 +103,28 @@ class AlertWindow:
                 callback()
             except Exception as e:
                 logger.error(f"Reset callback error: {e}")
+    
+    def toggle_mute(self) -> None:
+        """Toggle mute state."""
+        self._muted = not self._muted
+        config.muted = self._muted
+        self._update_display()
+        self._update_mute_button()
+        
+        # Trigger callbacks
+        for callback in self._on_mute_callbacks:
+            try:
+                callback(self._muted)
+            except Exception as e:
+                logger.error(f"Mute callback error: {e}")
+    
+    def _update_mute_button(self) -> None:
+        """Update the mute button text."""
+        if self._mute_button:
+            if self._muted:
+                self._mute_button.set_text("Unmute")
+            else:
+                self._mute_button.set_text("Mute")
     
     def _set_state(self, state: AlertState) -> None:
         """Set the alert state and update animation."""
@@ -152,7 +186,9 @@ class AlertWindow:
         if not self._light_element:
             return
         
-        if not self._light_on:
+        if self._muted:
+            color = config.color_muted  # Dark blue when muted
+        elif not self._light_on:
             color = "#374151"  # Dark gray (off)
         elif self._state == AlertState.IDLE:
             color = config.color_idle
@@ -172,7 +208,9 @@ class AlertWindow:
             self._count_label.set_text(str(count) if count > 0 else "")
         
         if self._status_label:
-            if self._state == AlertState.IDLE:
+            if self._muted:
+                self._status_label.set_text("Muted")
+            elif self._state == AlertState.IDLE:
                 self._status_label.set_text("All Clear")
             elif self._state == AlertState.CHAT:
                 self._status_label.set_text("New Chat!")
@@ -183,8 +221,9 @@ class AlertWindow:
     
     def build(self) -> None:
         """Build the NiceGUI interface."""
-        # Configure the page
-        ui.query("body").style("margin: 0; overflow: hidden;")
+        # Configure the page - set dark background on html and body to eliminate white borders
+        ui.query("html").style("background-color: #1f2937;")
+        ui.query("body").style("margin: 0; padding: 0; overflow: hidden; background-color: #1f2937;")
         
         # Main container
         with ui.column().classes("w-full h-screen items-center justify-center gap-2 p-2").style(
@@ -206,13 +245,19 @@ class AlertWindow:
                 ).style("text-shadow: 0 0 10px rgba(0,0,0,0.5);")
             
             # Status text
-            self._status_label = ui.label("All Clear").classes(
+            self._status_label = ui.label("Muted" if self._muted else "All Clear").classes(
                 "text-sm font-medium text-gray-300"
             )
             
+            # Mute button (above reset)
+            self._mute_button = ui.button(
+                "Unmute" if self._muted else "Mute",
+                on_click=self.toggle_mute
+            ).classes("mt-2").props("dense size=sm color=blue-8")
+            
             # Reset button
             ui.button("Reset", on_click=self.reset).classes(
-                "mt-2"
+                "mt-1"
             ).props("dense size=sm color=grey-8")
         
         # Update glow effect based on state
@@ -223,7 +268,9 @@ class AlertWindow:
         async def update_glow():
             while True:
                 if self._light_element:
-                    if self._state == AlertState.IDLE:
+                    if self._muted:
+                        glow_color = "rgba(30, 58, 95, 0.5)"  # Dark blue glow
+                    elif self._state == AlertState.IDLE:
                         glow_color = "rgba(34, 197, 94, 0.5)"
                     elif self._state == AlertState.CHAT:
                         glow_color = "rgba(234, 179, 8, 0.6)"
@@ -232,7 +279,7 @@ class AlertWindow:
                     else:
                         glow_color = "rgba(34, 197, 94, 0.5)"
                     
-                    if self._light_on:
+                    if self._muted or self._light_on:
                         self._light_element.style(
                             f"box-shadow: 0 0 30px {glow_color};"
                         )

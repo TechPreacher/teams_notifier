@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 from src.ui.alert_window import AlertWindow, AlertState
+from src.config import config
 
 
 class TestAlertWindow:
@@ -14,6 +15,20 @@ class TestAlertWindow:
         
         assert window.state == AlertState.IDLE
         assert window.total_count == 0
+    
+    def test_initial_mute_state(self):
+        """Test initial mute state matches config."""
+        original_muted = config.muted
+        try:
+            config.muted = False
+            window = AlertWindow()
+            assert window.muted is False
+            
+            config.muted = True
+            window2 = AlertWindow()
+            assert window2.muted is True
+        finally:
+            config.muted = original_muted
     
     def test_notify_chat(self):
         """Test chat notification changes state."""
@@ -115,6 +130,81 @@ class TestAlertWindow:
         
         # Queue should have 2 items
         assert window._notification_queue.qsize() == 2
+    
+    def test_toggle_mute(self):
+        """Test toggling mute state."""
+        original_muted = config.muted
+        try:
+            config.muted = False
+            window = AlertWindow()
+            
+            assert window.muted is False
+            
+            window.toggle_mute()
+            assert window.muted is True
+            assert config.muted is True
+            
+            window.toggle_mute()
+            assert window.muted is False
+            assert config.muted is False
+        finally:
+            config.muted = original_muted
+    
+    def test_mute_callback(self):
+        """Test mute callback is invoked with correct state."""
+        original_muted = config.muted
+        try:
+            config.muted = False
+            window = AlertWindow()
+            callback = MagicMock()
+            window.on_mute(callback)
+            
+            window.toggle_mute()
+            callback.assert_called_once_with(True)
+            
+            callback.reset_mock()
+            window.toggle_mute()
+            callback.assert_called_once_with(False)
+        finally:
+            config.muted = original_muted
+    
+    def test_mute_preserves_notification_count(self):
+        """Test that muting preserves notification count."""
+        original_muted = config.muted
+        try:
+            config.muted = False
+            window = AlertWindow()
+            
+            window._process_chat()
+            window._process_urgent()
+            assert window.total_count == 2
+            
+            window.toggle_mute()
+            assert window.muted is True
+            assert window.total_count == 2  # Count preserved
+            
+            window._process_chat()  # Should still count while muted
+            assert window.total_count == 3
+        finally:
+            config.muted = original_muted
+    
+    def test_reset_does_not_affect_mute(self):
+        """Test that reset does not change mute state."""
+        original_muted = config.muted
+        try:
+            config.muted = False
+            window = AlertWindow()
+            
+            window.toggle_mute()
+            assert window.muted is True
+            
+            window._process_chat()
+            window.reset()
+            
+            assert window.muted is True  # Still muted after reset
+            assert window.total_count == 0
+        finally:
+            config.muted = original_muted
 
 
 class TestAlertState:

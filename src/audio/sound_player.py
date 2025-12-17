@@ -38,6 +38,14 @@ class SoundPlayer:
         """Play sound for urgent notification."""
         self._play_sound(config.urgent_sound)
     
+    def play_muted_sound(self) -> None:
+        """Play sound when muting."""
+        self._play_sound_always(config.muted_sound)
+    
+    def play_unmuted_sound(self) -> None:
+        """Play sound when unmuting."""
+        self._play_sound_always(config.unmuted_sound)
+    
     def _resolve_sound_path(self, sound_path: str) -> Path:
         """Resolve sound path, handling both absolute and relative paths."""
         path = Path(sound_path)
@@ -50,7 +58,10 @@ class SoundPlayer:
         """Play a sound file using macOS afplay command."""
         if not self._enabled:
             return
-        
+        self._play_sound_always(sound_path)
+    
+    def _play_sound_always(self, sound_path: str) -> None:
+        """Play a sound file regardless of enabled state (for mute/unmute feedback)."""
         # Resolve the path
         resolved_path = self._resolve_sound_path(sound_path)
         

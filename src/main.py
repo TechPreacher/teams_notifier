@@ -33,7 +33,7 @@ def handle_notification(notification: TeamsNotification) -> None:
     if notification.type == NotificationType.CHAT:
         logger.info("Chat notification received")
         alert.notify_chat()
-        if sound_player:
+        if sound_player and not alert.muted:
             sound_player.play_chat_sound()
         if webhook_sender:
             webhook_sender.send_notification_sync("message")
@@ -41,7 +41,7 @@ def handle_notification(notification: TeamsNotification) -> None:
     elif notification.type == NotificationType.URGENT:
         logger.info("Urgent notification received")
         alert.notify_urgent()
-        if sound_player:
+        if sound_player and not alert.muted:
             sound_player.play_urgent_sound()
         if webhook_sender:
             webhook_sender.send_notification_sync("urgent")
@@ -70,7 +70,17 @@ def main_page():
             webhook_sender.send_notification_sync("clear")
             logger.info("Clear notification sent to webhook")
     
+    # Register mute callback to play sounds
+    def on_mute(muted: bool):
+        if sound_player:
+            if muted:
+                sound_player.play_muted_sound()
+            else:
+                sound_player.play_unmuted_sound()
+        logger.info(f"Mute state changed: {'muted' if muted else 'unmuted'}")
+    
     alert.on_reset(on_reset)
+    alert.on_mute(on_mute)
     alert.build()
 
 
@@ -167,14 +177,14 @@ def run_demo():
             if random.random() < 0.3:  # 30% chance of urgent
                 logger.info("[DEMO] Simulating urgent notification")
                 alert.notify_urgent()
-                if sound_player:
+                if sound_player and not alert.muted:
                     sound_player.play_urgent_sound()
                 if webhook_sender:
                     webhook_sender.send_notification_sync("urgent")
             else:
                 logger.info("[DEMO] Simulating chat notification")
                 alert.notify_chat()
-                if sound_player:
+                if sound_player and not alert.muted:
                     sound_player.play_chat_sound()
                 if webhook_sender:
                     webhook_sender.send_notification_sync("message")
@@ -189,7 +199,17 @@ def run_demo():
                 webhook_sender.send_notification_sync("clear")
                 logger.info("[DEMO] Clear notification sent to webhook")
         
+        # Register mute callback to play sounds
+        def on_mute(muted: bool):
+            if sound_player:
+                if muted:
+                    sound_player.play_muted_sound()
+                else:
+                    sound_player.play_unmuted_sound()
+            logger.info(f"[DEMO] Mute state changed: {'muted' if muted else 'unmuted'}")
+        
         alert.on_reset(on_reset)
+        alert.on_mute(on_mute)
         alert.build()
         # Start simulation
         asyncio.create_task(simulate_notifications())
