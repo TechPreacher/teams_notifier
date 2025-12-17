@@ -1,7 +1,7 @@
 [project]
 name = "teams-notifier"
 version = "0.1.0"
-description = "A macOS alert light application that monitors Microsoft Teams for new chat messages and mentions"
+description = "A macOS alert light application that monitors Microsoft Teams for new chat messages and urgent notifications"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"

@@ -18,7 +18,7 @@ class TeamsMenuBar(rumps.App):
     # Status icons (using emoji as simple icons)
     ICON_IDLE = "🟢"
     ICON_CHAT = "🟡"
-    ICON_MENTION = "🔴"
+    ICON_URGENT = "🔴"
     
     def __init__(self, port: int = 8080):
         super().__init__(
@@ -67,8 +67,8 @@ class TeamsMenuBar(rumps.App):
             icon = self.ICON_IDLE
         elif state == "chat":
             icon = self.ICON_CHAT
-        elif state == "mention":
-            icon = self.ICON_MENTION
+        elif state == "urgent":
+            icon = self.ICON_URGENT
         else:
             icon = self.ICON_IDLE
         

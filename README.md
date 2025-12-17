@@ -172,7 +172,7 @@ When enabled, the app sends a POST request with this JSON payload:
 
 ```json
 {
-  "type": "message",           // or "mention" or "clear"
+  "type": "message",           // or "urgent" or "clear"
   "timestamp": "2025-12-15T14:30:00.123456Z",
   "source": "teams-notifier"
 }
@@ -211,6 +211,52 @@ The app detects notification types based on the sound Teams plays:
 - **Basic sounds** (`a*_teams_basic_notification_*`) → Yellow light (CHAT) + `GLaDOS-teams-message.wav`
 
 This detection is reliable because Teams uses different sound categories for different notification priorities. Mentions and priority notifications use "urgent" sounds, while regular chat messages use "basic" sounds.
+
+### Customizing Sound Detection
+
+If you've changed your Teams notification sounds or if Microsoft updates the sound names, you can configure the patterns used to detect notification types.
+
+**Step 1: Find your Teams sound names**
+
+Run this command in Terminal while receiving Teams notifications:
+
+```bash
+log stream --predicate 'process == "NotificationCenter"' | grep -i "Playing notification sound"
+```
+
+You'll see output like:
+```
+Playing notification sound { nam: a8_teams_basic_notification_r4_ping } for com.microsoft.teams2
+Playing notification sound { nam: b2_teams_urgent_notification_r4_prioritize } for com.microsoft.teams2
+```
+
+The sound name is the value after `nam:` (e.g., `a8_teams_basic_notification_r4_ping`).
+
+**Step 2: Configure the patterns**
+
+Add to your `.env` file:
+
+```dotenv
+# Patterns that trigger URGENT (red light) - comma-separated
+URGENT_SOUND_PATTERNS=urgent,prioritize,escalate,alarm
+
+# Patterns that trigger CHAT (yellow light) - comma-separated  
+CHAT_SOUND_PATTERNS=basic,ping,notify
+```
+
+The patterns are **case-insensitive substrings**. If any pattern matches part of the sound name, that classification is used.
+
+**Default patterns:**
+- `URGENT_SOUND_PATTERNS`: `urgent,prioritize,escalate,alarm`
+- `CHAT_SOUND_PATTERNS`: `basic,ping,notify`
+
+**Example custom configuration:**
+
+If Teams uses sounds like `custom_mention_alert` for urgent notifications:
+
+```dotenv
+URGENT_SOUND_PATTERNS=urgent,mention,alert,priority
+```
 
 ### Available System Sounds
 

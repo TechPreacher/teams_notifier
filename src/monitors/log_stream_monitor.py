@@ -44,7 +44,7 @@ class LogStreamMonitor:
     User Notifications framework.
     
     Notification type detection is based on the sound Teams plays:
-    - "urgent" sounds (b*_teams_urgent_notification_*) → MENTION
+    - "urgent" sounds (b*_teams_urgent_notification_*) → URGENT
     - "basic" sounds (a*_teams_basic_notification_*) → CHAT
     """
     
@@ -61,15 +61,6 @@ class LogStreamMonitor:
         r'Playing notification sound \{ nam: ([^\s}]+) \} for com\.microsoft\.teams',
         re.IGNORECASE
     )
-    
-    # Sound patterns that indicate urgent/mention notifications
-    # Teams uses "urgent" sounds for mentions and priority notifications
-    URGENT_SOUND_PATTERNS = [
-        'urgent',           # b*_teams_urgent_notification_*
-        'prioritize',       # b2_teams_urgent_notification_r4_prioritize
-        'escalate',         # b3_teams_urgent_notification_r4_escalate
-        'alarm',            # b4_teams_urgent_notification_r4_alarm
-    ]
     
     def __init__(self):
         self._callbacks: list[Callable[[TeamsNotification], None]] = []
@@ -118,11 +109,14 @@ class LogStreamMonitor:
         Teams uses different sound categories:
         - "urgent" sounds (b*_teams_urgent_notification_*) for urgent/priority messages
         - "basic" sounds (a*_teams_basic_notification_*) for regular chats
+        
+        Sound patterns are configurable via URGENT_SOUND_PATTERNS and
+        CHAT_SOUND_PATTERNS environment variables.
         """
         sound_lower = sound_name.lower()
         
         # Check if this is an urgent/priority sound
-        for pattern in self.URGENT_SOUND_PATTERNS:
+        for pattern in config.urgent_sound_patterns:
             if pattern in sound_lower:
                 logger.debug(f"Detected URGENT sound (pattern: '{pattern}' in '{sound_name}')")
                 return NotificationType.URGENT

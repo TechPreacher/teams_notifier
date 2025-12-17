@@ -56,6 +56,32 @@ def _get_webhook_url() -> str | None:
     return url if url else None
 
 
+def _get_urgent_sound_patterns() -> list[str]:
+    """Get urgent sound patterns from environment variable.
+    
+    Patterns are comma-separated substrings to match in Teams sound names.
+    Example: URGENT_SOUND_PATTERNS=urgent,prioritize,escalate,alarm
+    """
+    patterns = os.getenv("URGENT_SOUND_PATTERNS")
+    if patterns:
+        return [p.strip().lower() for p in patterns.split(",") if p.strip()]
+    # Default patterns that match Teams urgent/priority notification sounds
+    return ["urgent", "prioritize", "escalate", "alarm"]
+
+
+def _get_chat_sound_patterns() -> list[str]:
+    """Get chat sound patterns from environment variable.
+    
+    Patterns are comma-separated substrings to match in Teams sound names.
+    Example: CHAT_SOUND_PATTERNS=basic,ping,notify
+    """
+    patterns = os.getenv("CHAT_SOUND_PATTERNS")
+    if patterns:
+        return [p.strip().lower() for p in patterns.split(",") if p.strip()]
+    # Default patterns that match Teams basic notification sounds
+    return ["basic", "ping", "notify"]
+
+
 @dataclass
 class Config:
     """Application configuration."""
@@ -88,6 +114,11 @@ class Config:
     
     # Webhook settings (loaded from WEBHOOK_URL environment variable)
     webhook_url: str | None = field(default_factory=_get_webhook_url)
+    
+    # Teams notification sound patterns (loaded from environment variables)
+    # These are substrings to match in the sound name Teams plays
+    urgent_sound_patterns: list[str] = field(default_factory=_get_urgent_sound_patterns)
+    chat_sound_patterns: list[str] = field(default_factory=_get_chat_sound_patterns)
 
 
 # Global config instance

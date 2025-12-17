@@ -70,7 +70,7 @@ class TestWebhookSender:
         mock_session.closed = False
         
         # Test all three notification types
-        for notification_type in ["message", "mention", "clear"]:
+        for notification_type in ["message", "urgent", "clear"]:
             async def run_test(ntype=notification_type):
                 with patch.object(sender, '_get_session', return_value=mock_session):
                     return await sender.send_notification(ntype)

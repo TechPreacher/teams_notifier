@@ -12,7 +12,7 @@ APP = ['app_entry.py']
 DATA_FILES = [
     ('resources/audio', [
         'resources/audio/GLaDOS-teams-message.wav',
-        'resources/audio/GLaDOS-teams-mention.wav',
+        'resources/audio/GLaDOS-teams-urgent.wav',
     ]),
     ('src', []),  # Ensure src directory exists in bundle
 ]
