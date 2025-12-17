@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+import queue
+import threading
 from enum import Enum, auto
 
 from nicegui import ui, app
@@ -33,6 +35,10 @@ class AlertWindow:
         
         # Callbacks for external events
         self._on_reset_callbacks: list = []
+        
+        # Thread-safe notification queue for cross-thread communication
+        self._notification_queue: queue.Queue = queue.Queue()
+        self._queue_processor_started = False
     
     @property
     def state(self) -> AlertState:
@@ -49,15 +55,25 @@ class AlertWindow:
         self._on_reset_callbacks.append(callback)
     
     def notify_chat(self) -> None:
-        """Register a new chat notification."""
+        """Register a new chat notification (thread-safe)."""
+        # Queue the notification for processing in the main thread
+        self._notification_queue.put(('chat', None))
+    
+    def notify_mention(self) -> None:
+        """Register a new mention notification (thread-safe)."""
+        # Queue the notification for processing in the main thread
+        self._notification_queue.put(('mention', None))
+    
+    def _process_chat(self) -> None:
+        """Process a chat notification (must be called from main thread)."""
         self._chat_count += 1
         # Only upgrade to CHAT if not already in MENTION state
         if self._state == AlertState.IDLE:
             self._set_state(AlertState.CHAT)
         self._update_display()
     
-    def notify_mention(self) -> None:
-        """Register a new mention notification."""
+    def _process_mention(self) -> None:
+        """Process a mention notification (must be called from main thread)."""
         self._mention_count += 1
         # MENTION always takes priority
         self._set_state(AlertState.MENTION)
@@ -229,6 +245,36 @@ class AlertWindow:
                 await asyncio.sleep(0.1)
         
         asyncio.create_task(update_glow())
+        
+        # Start the notification queue processor
+        self._start_queue_processor()
+    
+    def _start_queue_processor(self) -> None:
+        """Start processing the notification queue in the main event loop."""
+        if self._queue_processor_started:
+            return
+        self._queue_processor_started = True
+        
+        async def process_queue():
+            """Process notifications from the queue."""
+            while True:
+                try:
+                    # Check for queued notifications
+                    while not self._notification_queue.empty():
+                        try:
+                            notification_type, _ = self._notification_queue.get_nowait()
+                            if notification_type == 'chat':
+                                self._process_chat()
+                            elif notification_type == 'mention':
+                                self._process_mention()
+                        except queue.Empty:
+                            break
+                except Exception as e:
+                    logger.error(f"Error processing notification queue: {e}")
+                
+                await asyncio.sleep(0.1)  # Check queue 10 times per second
+        
+        asyncio.create_task(process_queue())
 
 
 # Global alert window instance

@@ -89,10 +89,9 @@ Double-click `start.command` in Finder to launch without building.
 
 ### Permissions Required
 
-Grant these permissions for notification monitoring:
-   - Go to **System Settings** → **Privacy & Security** → **Accessibility**
-   - Add your terminal app (Terminal.app, iTerm, or VS Code)
-   - Also check **Notifications** → Ensure Teams has notifications enabled
+Ensure Teams notifications are enabled in macOS:
+   - Go to **System Settings** → **Notifications** → **Microsoft Teams**
+   - Enable **Allow Notifications**
 
 ## Usage
 
@@ -110,12 +109,14 @@ python -m src.main --demo
 
 ## How It Works
 
-The app monitors macOS Distributed Notification Center for Teams notifications. When Teams sends a notification to macOS, this app intercepts it and:
+The app monitors macOS system logs for Teams notification events using `log stream`. When the NotificationCenter process receives a notification from Teams, this app detects it and:
 
 1. Determines if it's a chat message or mention
 2. Updates the visual alert light
 3. Plays the appropriate sound
 4. Updates the notification count
+
+This approach works reliably with the new Microsoft Teams app (`com.microsoft.teams2`) which uses the User Notifications framework.
 
 ## Configuration
 
@@ -238,12 +239,12 @@ The app adds an icon to your menu bar:
    - macOS: System Settings → Notifications → Microsoft Teams → Allow Notifications
    - Teams: Settings → Notifications → Enable all relevant options
 
-2. **Check accessibility permissions**:
-   - System Settings → Privacy & Security → Accessibility
-   - Ensure your terminal/Python is listed and checked
-
-3. **Verify Teams is running**:
+2. **Verify Teams is running**:
    - The app monitors notifications from Teams, so Teams must be running
+
+3. **Check log stream access**:
+   - The app uses macOS `log stream` to detect notifications
+   - This should work without special permissions on most systems
 
 ### No sound
 
@@ -317,10 +318,13 @@ src/
 │   └── menu_bar.py      # macOS menu bar integration
 ├── monitors/
 │   ├── __init__.py
-│   └── notification_monitor.py  # macOS notification listener
-└── audio/
+│   └── log_stream_monitor.py    # macOS log stream monitor
+├── audio/
+│   ├── __init__.py
+│   └── sound_player.py  # Sound playback
+└── webhook/
     ├── __init__.py
-    └── sound_player.py  # Sound playback
+    └── sender.py        # Webhook notifications
 ```
 
 ### Running Tests

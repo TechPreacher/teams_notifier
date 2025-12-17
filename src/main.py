@@ -8,7 +8,7 @@ import sys
 from nicegui import ui, app
 
 from .config import config
-from .monitors.notification_monitor import NotificationMonitor, NotificationType, TeamsNotification
+from .monitors.log_stream_monitor import LogStreamMonitor, NotificationType, TeamsNotification
 from .audio.sound_player import SoundPlayer
 from .ui.alert_window import AlertWindow, get_alert_window, AlertState
 from .webhook import WebhookSender
@@ -21,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Global instances
-monitor: NotificationMonitor | None = None
+monitor: LogStreamMonitor | None = None
 sound_player: SoundPlayer | None = None
 webhook_sender: WebhookSender | None = None
 
@@ -113,8 +113,8 @@ def run():
     if webhook_sender.enabled:
         logger.info(f"Webhook notifications enabled: {config.webhook_url}")
     
-    # Start notification monitor
-    monitor = NotificationMonitor()
+    # Start notification monitor (uses log stream to detect Teams notifications)
+    monitor = LogStreamMonitor()
     monitor.add_callback(handle_notification)
     monitor.start()
     

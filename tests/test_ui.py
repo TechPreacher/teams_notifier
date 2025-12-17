@@ -20,7 +20,8 @@ class TestAlertWindow:
         """Test chat notification changes state."""
         window = AlertWindow()
         
-        window.notify_chat()
+        # Use internal method for testing (notify_chat queues for async processing)
+        window._process_chat()
         
         assert window.state == AlertState.CHAT
         assert window.total_count == 1
@@ -29,7 +30,8 @@ class TestAlertWindow:
         """Test mention notification changes state."""
         window = AlertWindow()
         
-        window.notify_mention()
+        # Use internal method for testing
+        window._process_mention()
         
         assert window.state == AlertState.MENTION
         assert window.total_count == 1
@@ -38,20 +40,20 @@ class TestAlertWindow:
         """Test that mention state takes priority over chat."""
         window = AlertWindow()
         
-        window.notify_chat()
+        window._process_chat()
         assert window.state == AlertState.CHAT
         
-        window.notify_mention()
+        window._process_mention()
         assert window.state == AlertState.MENTION
     
     def test_chat_does_not_override_mention(self):
         """Test that chat does not override mention state."""
         window = AlertWindow()
         
-        window.notify_mention()
+        window._process_mention()
         assert window.state == AlertState.MENTION
         
-        window.notify_chat()
+        window._process_chat()
         assert window.state == AlertState.MENTION  # Still mention
         assert window.total_count == 2
     
@@ -59,8 +61,8 @@ class TestAlertWindow:
         """Test reset returns to idle state."""
         window = AlertWindow()
         
-        window.notify_chat()
-        window.notify_mention()
+        window._process_chat()
+        window._process_mention()
         assert window.total_count == 2
         
         window.reset()
@@ -74,7 +76,7 @@ class TestAlertWindow:
         callback = MagicMock()
         window.on_reset(callback)
         
-        window.notify_chat()
+        window._process_chat()
         window.reset()
         
         callback.assert_called_once()
@@ -83,9 +85,9 @@ class TestAlertWindow:
         """Test multiple notifications increment count."""
         window = AlertWindow()
         
-        window.notify_chat()
-        window.notify_chat()
-        window.notify_chat()
+        window._process_chat()
+        window._process_chat()
+        window._process_chat()
         
         assert window.total_count == 3
         assert window._chat_count == 3
@@ -95,14 +97,25 @@ class TestAlertWindow:
         """Test mixed notification types."""
         window = AlertWindow()
         
-        window.notify_chat()
-        window.notify_mention()
-        window.notify_chat()
+        window._process_chat()
+        window._process_mention()
+        window._process_chat()
         
         assert window.total_count == 3
         assert window._chat_count == 2
         assert window._mention_count == 1
         assert window.state == AlertState.MENTION
+    
+    def test_notify_queues_notification(self):
+        """Test that notify_chat and notify_mention queue notifications."""
+        window = AlertWindow()
+        
+        # These should queue notifications, not process immediately
+        window.notify_chat()
+        window.notify_mention()
+        
+        # Queue should have 2 items
+        assert window._notification_queue.qsize() == 2
 
 
 class TestAlertState:

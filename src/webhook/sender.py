@@ -4,8 +4,10 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Optional
+import threading
 
 import aiohttp
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -75,31 +77,68 @@ class WebhookSender:
             logger.error(f"Failed to send webhook: {e}")
             return False
     
+    def _send_sync_request(self, notification_type: str) -> bool:
+        """Send webhook using synchronous requests library.
+        
+        This is used when called from a background thread where asyncio
+        event loops may not be available or may conflict with the main loop.
+        """
+        payload = {
+            "type": notification_type,
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "source": "teams-notifier"
+        }
+        
+        try:
+            response = requests.post(
+                self.webhook_url,
+                json=payload,
+                timeout=10
+            )
+            if response.status_code < 300:
+                logger.info(f"Webhook sent successfully: {notification_type}")
+                return True
+            else:
+                logger.warning(
+                    f"Webhook returned status {response.status_code}: {response.text}"
+                )
+                return False
+        except requests.Timeout:
+            logger.warning("Webhook request timed out")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to send webhook: {e}")
+            return False
+    
     def send_notification_sync(self, notification_type: str) -> None:
         """Send a notification to the webhook (fire-and-forget from sync context).
         
         Args:
-            notification_type: Either "message" or "mention"
+            notification_type: Either "message", "mention", or "clear"
         """
         if not self.enabled:
             return
         
-        try:
-            # Try to get the running loop (works in async context like NiceGUI)
+        # Check if we're in the main thread with a running event loop
+        if threading.current_thread() is threading.main_thread():
             try:
                 loop = asyncio.get_running_loop()
-                # We're in an async context, schedule the task
+                # We're in the main thread with an async context, schedule the task
                 asyncio.create_task(self.send_notification(notification_type))
                 logger.debug(f"Scheduled webhook task for: {notification_type}")
                 return
             except RuntimeError:
-                # No running loop, we're in sync context
+                # No running loop in main thread
                 pass
-            
-            # Fallback: run in new event loop
-            asyncio.run(self.send_notification(notification_type))
-        except Exception as e:
-            logger.error(f"Failed to schedule webhook: {e}")
+        
+        # We're in a background thread or no event loop - use sync requests
+        # Run in a separate thread to avoid blocking
+        thread = threading.Thread(
+            target=self._send_sync_request,
+            args=(notification_type,),
+            daemon=True
+        )
+        thread.start()
     
     async def close(self) -> None:
         """Close the aiohttp session."""
