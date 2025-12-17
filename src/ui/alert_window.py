@@ -3,10 +3,9 @@
 import asyncio
 import logging
 import queue
-import threading
 from enum import Enum, auto
 
-from nicegui import ui, app
+from nicegui import ui
 
 from ..config import config
 

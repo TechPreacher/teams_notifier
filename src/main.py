@@ -10,7 +10,7 @@ from nicegui import ui, app
 from .config import config
 from .monitors.log_stream_monitor import LogStreamMonitor, NotificationType, TeamsNotification
 from .audio.sound_player import SoundPlayer
-from .ui.alert_window import AlertWindow, get_alert_window, AlertState
+from .ui.alert_window import get_alert_window
 from .webhook import WebhookSender
 
 # Configure logging

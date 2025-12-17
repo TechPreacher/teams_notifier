@@ -122,7 +122,7 @@ class WebhookSender:
         # Check if we're in the main thread with a running event loop
         if threading.current_thread() is threading.main_thread():
             try:
-                loop = asyncio.get_running_loop()
+                asyncio.get_running_loop()
                 # We're in the main thread with an async context, schedule the task
                 asyncio.create_task(self.send_notification(notification_type))
                 logger.debug(f"Scheduled webhook task for: {notification_type}")

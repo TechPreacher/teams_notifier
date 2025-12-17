@@ -1,7 +1,6 @@
 """Tests for the log stream notification monitor."""
 
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from datetime import datetime
 
 from src.monitors.log_stream_monitor import (

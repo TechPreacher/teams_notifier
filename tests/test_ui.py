@@ -1,7 +1,6 @@
 """Tests for the alert window UI."""
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 
 from src.ui.alert_window import AlertWindow, AlertState
 

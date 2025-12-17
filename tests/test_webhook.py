@@ -1,7 +1,6 @@
 """Tests for webhook sender."""
 
 import asyncio
-import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from src.webhook.sender import WebhookSender
