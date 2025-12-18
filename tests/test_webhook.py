@@ -44,6 +44,36 @@ class TestWebhookSender:
         assert sender._payloads["urgent"] == custom_urgent
         assert sender._payloads["clear"] == custom_clear
 
+    def test_init_with_bearer_token(self):
+        """Test initialization with bearer token."""
+        sender = WebhookSender(
+            webhook_url="https://example.com/webhook",
+            bearer_token="my-secret-token",
+        )
+        assert sender._bearer_token == "my-secret-token"
+
+    def test_init_without_bearer_token(self):
+        """Test initialization without bearer token."""
+        sender = WebhookSender(webhook_url="https://example.com/webhook")
+        assert sender._bearer_token is None
+
+    def test_get_headers_without_bearer(self):
+        """Test _get_headers returns only Content-Type when no bearer token."""
+        sender = WebhookSender(webhook_url="https://example.com/webhook")
+        headers = sender._get_headers()
+        assert headers == {"Content-Type": "application/json"}
+        assert "Authorization" not in headers
+
+    def test_get_headers_with_bearer(self):
+        """Test _get_headers includes Authorization header with bearer token."""
+        sender = WebhookSender(
+            webhook_url="https://example.com/webhook",
+            bearer_token="my-secret-token",
+        )
+        headers = sender._get_headers()
+        assert headers["Content-Type"] == "application/json"
+        assert headers["Authorization"] == "Bearer my-secret-token"
+
     def test_get_payload_with_custom(self):
         """Test _get_payload returns custom payload when configured."""
         custom_payload = {"userId": "test-123", "actionFields": {"color": "red"}}
@@ -139,6 +169,36 @@ class TestWebhookSender:
         # Verify the custom payload was sent
         call_args = mock_session.post.call_args
         assert call_args.kwargs["json"] == custom_payload
+
+    def test_send_notification_with_bearer_token(self):
+        """Test webhook sends Authorization header when bearer token configured."""
+        sender = WebhookSender(
+            webhook_url="https://example.com/webhook",
+            bearer_token="test-bearer-token",
+        )
+
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session = MagicMock()
+        mock_session.post = MagicMock(return_value=mock_response)
+        mock_session.closed = False
+
+        async def run_test():
+            with patch.object(sender, "_get_session", return_value=mock_session):
+                return await sender.send_notification("message")
+
+        result = asyncio.get_event_loop().run_until_complete(run_test())
+        assert result is True
+
+        # Verify the Authorization header was sent
+        call_args = mock_session.post.call_args
+        assert "headers" in call_args.kwargs
+        assert (
+            call_args.kwargs["headers"]["Authorization"] == "Bearer test-bearer-token"
+        )
 
     def test_send_notification_types(self):
         """Test that all notification types can be sent."""

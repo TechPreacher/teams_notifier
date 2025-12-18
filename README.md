@@ -122,6 +122,26 @@ This approach works reliably with the new Microsoft Teams app (`com.microsoft.te
 
 ## Configuration
 
+### Environment Variables
+
+Configuration is done via a `.env` file. Copy `.env.example` to `.env` and customize:
+
+```bash
+cp .env.example .env
+```
+
+#### Log Level
+
+Set the logging verbosity:
+
+```dotenv
+# Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL
+# Default: INFO
+LOG_LEVEL=DEBUG
+```
+
+### Code Configuration
+
 Edit `src/config.py` to customize:
 
 ```python
@@ -165,6 +185,18 @@ WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/your-id/your-hook/
 ```
 
 Leave `WEBHOOK_URL` empty or remove it to disable webhooks.
+
+#### Bearer Token Authentication
+
+If your webhook requires authentication, you can configure a bearer token:
+
+```dotenv
+# .env
+WEBHOOK_URL=https://your-api.example.com/webhook
+WEBHOOK_BEARER=your-secret-token-here
+```
+
+When `WEBHOOK_BEARER` is set, the app adds an `Authorization: Bearer <token>` header to all webhook requests.
 
 **For the bundled .app**, place the `.env` file in one of these locations (checked in order):
 1. Next to the `.app` bundle (e.g., `/Applications/.env` or `~/Desktop/.env`)
@@ -222,6 +254,12 @@ WEBHOOK_PAYLOAD_CLEAR={"userId": "your-luxafor-id", "actionFields": {"color": "g
 # Test message notification (default payload)
 curl -X POST "YOUR_WEBHOOK_URL" \
   -H "Content-Type: application/json" \
+  -d '{"type": "message", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
+
+# Test with bearer token authentication
+curl -X POST "YOUR_WEBHOOK_URL" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-secret-token" \
   -d '{"type": "message", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
 
 # Test with custom Luxafor payload

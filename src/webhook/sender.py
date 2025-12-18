@@ -21,6 +21,7 @@ class WebhookSender:
         payload_message: Optional[dict[str, Any]] = None,
         payload_urgent: Optional[dict[str, Any]] = None,
         payload_clear: Optional[dict[str, Any]] = None,
+        bearer_token: Optional[str] = None,
     ):
         """Initialize the webhook sender.
 
@@ -30,8 +31,10 @@ class WebhookSender:
             payload_message: Custom JSON payload for 'message' notifications.
             payload_urgent: Custom JSON payload for 'urgent' notifications.
             payload_clear: Custom JSON payload for 'clear' notifications.
+            bearer_token: Optional bearer token for Authorization header.
         """
         self.webhook_url = webhook_url
+        self._bearer_token = bearer_token
         self._payloads = {
             "message": payload_message,
             "urgent": payload_urgent,
@@ -43,6 +46,23 @@ class WebhookSender:
     def enabled(self) -> bool:
         """Check if webhook notifications are enabled."""
         return bool(self.webhook_url)
+
+    def _get_headers(self) -> dict[str, str]:
+        """Get HTTP headers for webhook requests."""
+        headers = {"Content-Type": "application/json"}
+        if self._bearer_token:
+            headers["Authorization"] = f"Bearer {self._bearer_token}"
+        return headers
+
+    def _sanitize_headers(self, headers: dict[str, str]) -> dict[str, str]:
+        """Sanitize headers for logging (hide sensitive values)."""
+        sanitized = headers.copy()
+        if "Authorization" in sanitized:
+            # Show only first 10 chars of token for debugging
+            auth = sanitized["Authorization"]
+            if auth.startswith("Bearer ") and len(auth) > 17:
+                sanitized["Authorization"] = f"Bearer {auth[7:17]}..."
+        return sanitized
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create the aiohttp session."""
@@ -87,8 +107,18 @@ class WebhookSender:
 
         try:
             session = await self._get_session()
+            headers = self._get_headers()
+
+            # Debug log the request details
+            logger.debug(f"Webhook URL: {self.webhook_url}")
+            logger.debug(f"Webhook headers: {self._sanitize_headers(headers)}")
+            logger.debug(f"Webhook payload: {payload}")
+
             async with session.post(
-                self.webhook_url, json=payload, timeout=aiohttp.ClientTimeout(total=10)
+                self.webhook_url,
+                json=payload,
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
                 if response.status < 300:
                     logger.info(f"Webhook sent successfully: {notification_type}")
@@ -112,9 +142,17 @@ class WebhookSender:
         event loops may not be available or may conflict with the main loop.
         """
         payload = self._get_payload(notification_type)
+        headers = self._get_headers()
+
+        # Debug log the request details
+        logger.debug(f"Webhook URL: {self.webhook_url}")
+        logger.debug(f"Webhook headers: {self._sanitize_headers(headers)}")
+        logger.debug(f"Webhook payload: {payload}")
 
         try:
-            response = requests.post(self.webhook_url, json=payload, timeout=10)
+            response = requests.post(
+                self.webhook_url, json=payload, headers=headers, timeout=10
+            )
             if response.status_code < 300:
                 logger.info(f"Webhook sent successfully: {notification_type}")
                 return True

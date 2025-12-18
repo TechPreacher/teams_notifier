@@ -59,6 +59,29 @@ def _get_webhook_url() -> str | None:
     return url if url else None
 
 
+def _get_webhook_bearer() -> str | None:
+    """Get webhook bearer token from environment variable.
+
+    If WEBHOOK_BEARER is set, it will be used as the Authorization header:
+    Authorization: Bearer <token>
+    """
+    token = os.getenv("WEBHOOK_BEARER")
+    return token if token else None
+
+
+def _get_log_level() -> str:
+    """Get log level from environment variable.
+
+    Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL
+    Default: INFO
+    """
+    level = os.getenv("LOG_LEVEL", "INFO").upper()
+    valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    if level not in valid_levels:
+        return "INFO"
+    return level
+
+
 def _get_urgent_sound_patterns() -> list[str]:
     """Get urgent sound patterns from environment variable.
 
@@ -128,6 +151,9 @@ def _get_webhook_payload_clear() -> dict[str, Any] | None:
 class Config:
     """Application configuration."""
 
+    # Logging
+    log_level: str = field(default_factory=_get_log_level)
+
     # Window settings
     window_width: int = 150
     window_height: int = 260
@@ -162,6 +188,9 @@ class Config:
 
     # Webhook settings (loaded from WEBHOOK_URL environment variable)
     webhook_url: str | None = field(default_factory=_get_webhook_url)
+
+    # Webhook bearer token for Authorization header (loaded from WEBHOOK_BEARER)
+    webhook_bearer: str | None = field(default_factory=_get_webhook_bearer)
 
     # Webhook payloads (loaded from environment variables)
     # These are JSON objects sent to the webhook for each notification type

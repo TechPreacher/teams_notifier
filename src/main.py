@@ -5,24 +5,36 @@ import logging
 import signal
 import sys
 
-from nicegui import ui, app
-
+# Configure logging FIRST, before any other imports that might create loggers
+# Import config to load .env and get log level
 from .config import config
-from .monitors.log_stream_monitor import (
+
+# Get the log level from config
+log_level = getattr(logging, config.log_level, logging.INFO)
+
+# Configure root logger - use force=True to override any existing config
+logging.basicConfig(
+    level=log_level,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    force=True,
+)
+
+# Also set level on the root logger explicitly
+logging.getLogger().setLevel(log_level)
+
+logger = logging.getLogger(__name__)
+
+# Now import other modules (their loggers will inherit the configured level)
+from nicegui import ui, app  # noqa: E402
+
+from .monitors.log_stream_monitor import (  # noqa: E402
     LogStreamMonitor,
     NotificationType,
     TeamsNotification,
 )
-from .audio.sound_player import SoundPlayer
-from .ui.alert_window import get_alert_window
-from .webhook import WebhookSender
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+from .audio.sound_player import SoundPlayer  # noqa: E402
+from .ui.alert_window import get_alert_window  # noqa: E402
+from .webhook import WebhookSender  # noqa: E402
 
 # Global instances
 monitor: LogStreamMonitor | None = None
@@ -129,9 +141,12 @@ def run():
         payload_message=config.webhook_payload_message,
         payload_urgent=config.webhook_payload_urgent,
         payload_clear=config.webhook_payload_clear,
+        bearer_token=config.webhook_bearer,
     )
     if webhook_sender.enabled:
         logger.info(f"Webhook notifications enabled: {config.webhook_url}")
+        if config.webhook_bearer:
+            logger.info("Webhook authorization: Bearer token configured")
 
     # Start notification monitor (uses log stream to detect Teams notifications)
     monitor = LogStreamMonitor()
@@ -172,9 +187,12 @@ def run_demo():
         payload_message=config.webhook_payload_message,
         payload_urgent=config.webhook_payload_urgent,
         payload_clear=config.webhook_payload_clear,
+        bearer_token=config.webhook_bearer,
     )
     if webhook_sender.enabled:
         logger.info(f"Webhook notifications enabled: {config.webhook_url}")
+        if config.webhook_bearer:
+            logger.info("[DEMO] Webhook authorization: Bearer token configured")
 
     async def simulate_notifications():
         """Simulate notifications for testing."""
