@@ -59,11 +59,19 @@ class AlertWindow:
         return self._muted
 
     def on_reset(self, callback) -> None:
-        """Register a callback for when reset is clicked."""
+        """Register a callback for when reset is clicked.
+
+        Clears any existing callbacks first to prevent duplicate calls.
+        """
+        self._on_reset_callbacks.clear()
         self._on_reset_callbacks.append(callback)
 
     def on_mute(self, callback) -> None:
-        """Register a callback for when mute is toggled."""
+        """Register a callback for when mute is toggled.
+
+        Clears any existing callbacks first to prevent duplicate calls.
+        """
+        self._on_mute_callbacks.clear()
         self._on_mute_callbacks.append(callback)
 
     def notify_chat(self) -> None:

@@ -55,8 +55,17 @@ class SoundPlayer:
         return PROJECT_ROOT / path
 
     def _play_sound(self, sound_path: str) -> None:
-        """Play a sound file using macOS afplay command."""
+        """Play a sound file using macOS afplay command.
+
+        Sound will not play if:
+        - Sound is globally disabled (config.sound_enabled is False)
+        - App is muted (config.muted is True)
+        """
         if not self._enabled:
+            return
+        # Check mute state from config (as safety net - caller should also check)
+        if config.muted:
+            logger.debug("Sound skipped - app is muted")
             return
         self._play_sound_always(sound_path)
 

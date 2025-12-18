@@ -168,6 +168,54 @@ class TestAlertWindow:
         finally:
             config.muted = original_muted
 
+    def test_on_mute_clears_existing_callbacks(self):
+        """Test that on_mute clears existing callbacks before adding new one.
+
+        This prevents double audio feedback when the page is refreshed/revisited.
+        """
+        original_muted = config.muted
+        try:
+            config.muted = False
+            window = AlertWindow()
+
+            callback1 = MagicMock()
+            callback2 = MagicMock()
+
+            # Register first callback
+            window.on_mute(callback1)
+            # Register second callback (should replace first)
+            window.on_mute(callback2)
+
+            window.toggle_mute()
+
+            # Only callback2 should be called (callback1 was cleared)
+            callback1.assert_not_called()
+            callback2.assert_called_once_with(True)
+        finally:
+            config.muted = original_muted
+
+    def test_on_reset_clears_existing_callbacks(self):
+        """Test that on_reset clears existing callbacks before adding new one.
+
+        This prevents duplicate callback execution when the page is refreshed.
+        """
+        window = AlertWindow()
+
+        callback1 = MagicMock()
+        callback2 = MagicMock()
+
+        # Register first callback
+        window.on_reset(callback1)
+        # Register second callback (should replace first)
+        window.on_reset(callback2)
+
+        window._process_chat()
+        window.reset()
+
+        # Only callback2 should be called (callback1 was cleared)
+        callback1.assert_not_called()
+        callback2.assert_called_once()
+
     def test_mute_preserves_notification_count(self):
         """Test that muting preserves notification count."""
         original_muted = config.muted
