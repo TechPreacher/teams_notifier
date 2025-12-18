@@ -15,6 +15,8 @@ A macOS alert light application that monitors Microsoft Teams for new chat messa
 - **Menu Bar Icon** - Quick access from the macOS menu bar
 - **Reset Button** - Acknowledge notifications and return to idle state
 
+![App status](./resources/images/app-status.png)
+
 ## Requirements
 
 - macOS 11.0 or later
@@ -170,7 +172,17 @@ Place your own audio files in `resources/audio/` and update the paths in config.
 
 ### Webhook Notifications
 
-The app can send notifications to a webhook URL when alerts are triggered. Configure by creating a `.env` file:
+The app can send notifications to a webhook URL when alerts are triggered. 
+
+This can be used for example to light up a Luxafor Flag USB notification device or any other notification system that accepts webhook calls.
+
+![Luxafor Flag](./resources/images/luxafor-status.png)
+
+It can also be used to fire off a Zapier zap.
+
+![Zapier zap](./resources/images/zapier.png)
+
+Configure by creating a `.env` file:
 
 ```bash
 # Copy the example file
