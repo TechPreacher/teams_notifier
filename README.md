@@ -9,10 +9,15 @@ A macOS alert light application that monitors Microsoft Teams for new chat messa
   - 🟡 **Yellow (pulsing)** = New chat message
   - 🔴 **Red (flashing)** = Urgent notification (mentions, priority messages)
   - 🔵 **Dark Blue** = Muted (notifications still counted, but no sound/animation)
+
 - **Notification Counter** - Shows the number of pending notifications
+
 - **Sound Alerts** - Different sounds for chat vs urgent notifications
+
 - **Mute Button** - Toggle mute to silence sounds while still tracking notifications
+
 - **Menu Bar Icon** - Quick access from the macOS menu bar
+
 - **Reset Button** - Acknowledge notifications and return to idle state
 
 ![App status](./resources/images/app-status.png)
@@ -253,11 +258,56 @@ WEBHOOK_PAYLOAD_CLEAR={"userId": "<your-id>", "actionFields": {"color": "green"}
 
 **Example: Luxafor Integration**
 
+The Luxafor flag USB notification device supports web hooks which can be configured via https://www.luxafor.app. 
+
+First, the physically connected Luxafor device needs to be connected to the web app. This requires the Edge or Chrome browser.
+
+![Luxafor web app: devices](./resources/images/luxafor-app-device.png)
+
+Next, the device needs to be configured to work with web hooks.
+
+![Luxafor web app: device configuration](./resources/images/luxafor-app-device.png)
+
+Now, a web hook for the device can be added which results in a token being generated.
+
+![Luxafor web app: device configuration](./resources/images/luxafor-app-webhook.png)
+
+**Configuring the Client to work with Luxafor Web hooks**
+
+Luxafor expects specific messages to be sent to the web hook in the format of:
+
+```bash
+curl -X POST "https://services.luxafor.io/webhook/api/v1/commands/send" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_api_key_here" \
+  -d '{"command":"color.set","payload":{"r":255,"g":0,"b":0}}'
+```
+
+To facilitate this, the app allows for custom web hook payloads to be configured in the env file:
+
 ```dotenv
-WEBHOOK_URL=https://api.luxafor.com/webhook/v1/actions/solid_color
-WEBHOOK_PAYLOAD_MESSAGE={"userId": "your-luxafor-id", "actionFields": {"color": "yellow"}}
-WEBHOOK_PAYLOAD_URGENT={"userId": "your-luxafor-id", "actionFields": {"color": "red"}}
-WEBHOOK_PAYLOAD_CLEAR={"userId": "your-luxafor-id", "actionFields": {"color": "green"}}
+# Webhook URL for notifications (optional)
+# Receives POST requests when notifications occur
+# Set to empty or remove to disable webhooks
+WEBHOOK_URL=https://services.luxafor.io/webhook/api/v1/commands/send
+
+# Webhook Bearer Token (optional)
+# If set, adds "Authorization: Bearer <token>" header to webhook requests
+WEBHOOK_BEARER=wk_xxxxx
+
+# Webhook Payloads (optional)
+# Custom JSON payloads to send for each notification type.
+# If not set, a default payload with type/timestamp/source is sent.
+# Each payload must be a valid JSON object on a single line.
+#
+# Payload for regular message notifications:
+WEBHOOK_PAYLOAD_MESSAGE={"command": "color.set", "payload": {"r": 0, "g": 255, "b": 0}}
+#
+# Payload for urgent/priority notifications:
+WEBHOOK_PAYLOAD_URGENT={"command": "color.set", "payload": {"r": 255, "g": 0, "b": 0}}
+#
+# Payload for clear/reset notifications (when user clicks the window):
+WEBHOOK_PAYLOAD_CLEAR={"command": "color.set", "payload": {"r": 0, "g": 0, "b": 0}}
 ```
 
 **Testing webhooks with curl:**
@@ -275,9 +325,10 @@ curl -X POST "YOUR_WEBHOOK_URL" \
   -d '{"type": "message", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
 
 # Test with custom Luxafor payload
-curl -X POST "https://api.luxafor.com/webhook/v1/actions/solid_color" \
+curl -X POST "https://services.luxafor.io/webhook/api/v1/commands/send" \
   -H "Content-Type: application/json" \
-  -d '{"userId": "your-luxafor-id", "actionFields": {"color": "red"}}'
+  -H "Authorization: Bearer wk_xxxx" \
+  -d '{"command": "color.set", "payload": {"r": 0, "g": 255, "b": 0}}'
 ```
 
 This integrates with services like Zapier, Make, n8n, Luxafor, or any custom webhook endpoint.
@@ -285,6 +336,7 @@ This integrates with services like Zapier, Make, n8n, Luxafor, or any custom web
 ### Notification Detection
 
 The app detects notification types based on the sound Teams plays:
+
 - **Urgent sounds** (`b*_teams_urgent_notification_*`) → Red light (URGENT) + `GLaDOS-teams-urgent.wav`
 - **Basic sounds** (`a*_teams_basic_notification_*`) → Yellow light (CHAT) + `GLaDOS-teams-message.wav`
 
@@ -303,7 +355,8 @@ log stream --predicate 'process == "NotificationCenter"' | grep -i "Playing noti
 ```
 
 You'll see output like:
-```
+
+```plain
 Playing notification sound { nam: a8_teams_basic_notification_r4_ping } for com.microsoft.teams2
 Playing notification sound { nam: b2_teams_urgent_notification_r4_prioritize } for com.microsoft.teams2
 ```
@@ -325,6 +378,7 @@ CHAT_SOUND_PATTERNS=basic,ping,notify
 The patterns are **case-insensitive substrings**. If any pattern matches part of the sound name, that classification is used.
 
 **Default patterns:**
+
 - `URGENT_SOUND_PATTERNS`: `urgent,prioritize,escalate,alarm`
 - `CHAT_SOUND_PATTERNS`: `basic,ping,notify`
 
@@ -339,6 +393,7 @@ URGENT_SOUND_PATTERNS=urgent,mention,alert,priority
 ### Available System Sounds
 
 Run this to list available sounds:
+
 ```bash
 ls /System/Library/Sounds/
 ```
@@ -431,7 +486,7 @@ pip install pyinstaller pytest
 
 ### Project Structure
 
-```
+```plain
 src/
 ├── __init__.py
 ├── main.py              # Entry point
