@@ -8,7 +8,11 @@ import sys
 from nicegui import ui, app
 
 from .config import config
-from .monitors.log_stream_monitor import LogStreamMonitor, NotificationType, TeamsNotification
+from .monitors.log_stream_monitor import (
+    LogStreamMonitor,
+    NotificationType,
+    TeamsNotification,
+)
 from .audio.sound_player import SoundPlayer
 from .ui.alert_window import get_alert_window
 from .webhook import WebhookSender
@@ -29,7 +33,7 @@ webhook_sender: WebhookSender | None = None
 def handle_notification(notification: TeamsNotification) -> None:
     """Handle incoming Teams notification."""
     alert = get_alert_window()
-    
+
     if notification.type == NotificationType.CHAT:
         logger.info("Chat notification received")
         alert.notify_chat()
@@ -37,7 +41,7 @@ def handle_notification(notification: TeamsNotification) -> None:
             sound_player.play_chat_sound()
         if webhook_sender:
             webhook_sender.send_notification_sync("message")
-    
+
     elif notification.type == NotificationType.URGENT:
         logger.info("Urgent notification received")
         alert.notify_urgent()
@@ -49,12 +53,13 @@ def handle_notification(notification: TeamsNotification) -> None:
 
 def setup_signal_handlers() -> None:
     """Set up graceful shutdown handlers."""
+
     def shutdown(signum, frame):
         logger.info("Shutting down...")
         if monitor:
             monitor.stop()
         sys.exit(0)
-    
+
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
@@ -63,13 +68,13 @@ def setup_signal_handlers() -> None:
 def main_page():
     """Main page with the alert light."""
     alert = get_alert_window()
-    
+
     # Register webhook callback for reset/clear button
     def on_reset():
         if webhook_sender:
             webhook_sender.send_notification_sync("clear")
             logger.info("Clear notification sent to webhook")
-    
+
     # Register mute callback to play sounds
     def on_mute(muted: bool):
         if sound_player:
@@ -78,7 +83,7 @@ def main_page():
             else:
                 sound_player.play_unmuted_sound()
         logger.info(f"Mute state changed: {'muted' if muted else 'unmuted'}")
-    
+
     alert.on_reset(on_reset)
     alert.on_mute(on_mute)
     alert.build()
@@ -94,7 +99,7 @@ async def set_always_on_top():
             logger.info("Window set to always-on-top via pywebview")
     except Exception as e:
         logger.warning(f"Could not set always-on-top: {e}")
-    
+
     # Periodically re-apply on_top to ensure it stays on top
     async def keep_on_top():
         while True:
@@ -104,39 +109,44 @@ async def set_always_on_top():
                     app.native.main_window.on_top = True
             except Exception:
                 pass
-    
+
     asyncio.create_task(keep_on_top())
 
 
 def run():
     """Run the Teams Notifier application."""
     global monitor, sound_player, webhook_sender
-    
+
     logger.info("Starting Teams Notifier...")
-    
+
     # Set up signal handlers
     setup_signal_handlers()
-    
+
     # Initialize components
     sound_player = SoundPlayer()
-    webhook_sender = WebhookSender(config.webhook_url)
+    webhook_sender = WebhookSender(
+        webhook_url=config.webhook_url,
+        payload_message=config.webhook_payload_message,
+        payload_urgent=config.webhook_payload_urgent,
+        payload_clear=config.webhook_payload_clear,
+    )
     if webhook_sender.enabled:
         logger.info(f"Webhook notifications enabled: {config.webhook_url}")
-    
+
     # Start notification monitor (uses log stream to detect Teams notifications)
     monitor = LogStreamMonitor()
     monitor.add_callback(handle_notification)
     monitor.start()
-    
+
     port = 8080
     logger.info(f"Starting NiceGUI on port {port}...")
-    
+
     # Note: Menu bar disabled due to thread conflicts with NiceGUI native mode
     # The alert window itself provides all necessary controls
-    
+
     # Set always-on-top after startup
     app.on_startup(set_always_on_top)
-    
+
     # Configure NiceGUI for small native window
     ui.run(
         port=port,
@@ -153,26 +163,32 @@ def run():
 def run_demo():
     """Run in demo mode with simulated notifications."""
     global sound_player, webhook_sender
-    
+
     logger.info("Starting Teams Notifier in DEMO mode...")
-    
+
     sound_player = SoundPlayer()
-    webhook_sender = WebhookSender(config.webhook_url)
+    webhook_sender = WebhookSender(
+        webhook_url=config.webhook_url,
+        payload_message=config.webhook_payload_message,
+        payload_urgent=config.webhook_payload_urgent,
+        payload_clear=config.webhook_payload_clear,
+    )
     if webhook_sender.enabled:
         logger.info(f"Webhook notifications enabled: {config.webhook_url}")
-    
+
     async def simulate_notifications():
         """Simulate notifications for testing."""
         import random
+
         await asyncio.sleep(3)  # Wait for UI to be ready
-        
+
         alert = get_alert_window()
-        
+
         while True:
             # Random delay between 5-15 seconds
             delay = random.uniform(5, 15)
             await asyncio.sleep(delay)
-            
+
             # Random notification type
             if random.random() < 0.3:  # 30% chance of urgent
                 logger.info("[DEMO] Simulating urgent notification")
@@ -188,17 +204,17 @@ def run_demo():
                     sound_player.play_chat_sound()
                 if webhook_sender:
                     webhook_sender.send_notification_sync("message")
-    
+
     @ui.page("/")
     def demo_page():
         alert = get_alert_window()
-        
+
         # Register webhook callback for reset/clear button
         def on_reset():
             if webhook_sender:
                 webhook_sender.send_notification_sync("clear")
                 logger.info("[DEMO] Clear notification sent to webhook")
-        
+
         # Register mute callback to play sounds
         def on_mute(muted: bool):
             if sound_player:
@@ -207,16 +223,16 @@ def run_demo():
                 else:
                     sound_player.play_unmuted_sound()
             logger.info(f"[DEMO] Mute state changed: {'muted' if muted else 'unmuted'}")
-        
+
         alert.on_reset(on_reset)
         alert.on_mute(on_mute)
         alert.build()
         # Start simulation
         asyncio.create_task(simulate_notifications())
-    
+
     # Set always-on-top after startup
     app.on_startup(set_always_on_top)
-    
+
     ui.run(
         port=8080,
         title=config.window_title + " [DEMO]",

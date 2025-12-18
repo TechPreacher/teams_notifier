@@ -171,11 +171,13 @@ Leave `WEBHOOK_URL` empty or remove it to disable webhooks.
 2. `~/.config/teams-notifier/.env`
 3. `~/.teams-notifier.env`
 
-When enabled, the app sends a POST request with this JSON payload:
+#### Default Payload
+
+When no custom payloads are configured, the app sends a POST request with this JSON payload:
 
 ```json
 {
-  "type": "message",           // or "urgent" or "clear"
+  "type": "message",
   "timestamp": "2025-12-15T14:30:00.123456Z",
   "source": "teams-notifier"
 }
@@ -186,26 +188,49 @@ The `type` field indicates the event:
 - `"urgent"` - Urgent notification (mention or priority message)
 - `"clear"` - User pressed the Reset button
 
+#### Custom Payloads
+
+You can configure custom JSON payloads for each notification type. This is useful for integrating with services that expect a specific payload format (e.g., Luxafor, IFTTT, custom APIs).
+
+Add these to your `.env` file:
+
+```dotenv
+# Custom payload for regular message notifications
+WEBHOOK_PAYLOAD_MESSAGE={"userId": "<your-id>", "actionFields": {"color": "yellow"}}
+
+# Custom payload for urgent/priority notifications
+WEBHOOK_PAYLOAD_URGENT={"userId": "<your-id>", "actionFields": {"color": "red"}}
+
+# Custom payload for clear/reset notifications
+WEBHOOK_PAYLOAD_CLEAR={"userId": "<your-id>", "actionFields": {"color": "green"}}
+```
+
+**Important:** Each payload must be valid JSON on a single line. If a payload is not set or is invalid JSON, the default payload format is used for that notification type.
+
+**Example: Luxafor Integration**
+
+```dotenv
+WEBHOOK_URL=https://api.luxafor.com/webhook/v1/actions/solid_color
+WEBHOOK_PAYLOAD_MESSAGE={"userId": "your-luxafor-id", "actionFields": {"color": "yellow"}}
+WEBHOOK_PAYLOAD_URGENT={"userId": "your-luxafor-id", "actionFields": {"color": "red"}}
+WEBHOOK_PAYLOAD_CLEAR={"userId": "your-luxafor-id", "actionFields": {"color": "green"}}
+```
+
 **Testing webhooks with curl:**
 
 ```bash
-# Test message notification
+# Test message notification (default payload)
 curl -X POST "YOUR_WEBHOOK_URL" \
   -H "Content-Type: application/json" \
   -d '{"type": "message", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
 
-# Test urgent notification
-curl -X POST "YOUR_WEBHOOK_URL" \
+# Test with custom Luxafor payload
+curl -X POST "https://api.luxafor.com/webhook/v1/actions/solid_color" \
   -H "Content-Type: application/json" \
-  -d '{"type": "urgent", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
-
-# Test clear notification
-curl -X POST "YOUR_WEBHOOK_URL" \
-  -H "Content-Type: application/json" \
-  -d '{"type": "clear", "timestamp": "2025-12-16T14:30:00Z", "source": "teams-notifier"}'
+  -d '{"userId": "your-luxafor-id", "actionFields": {"color": "red"}}'
 ```
 
-This integrates with services like Zapier, Make, n8n, or any custom webhook endpoint.
+This integrates with services like Zapier, Make, n8n, Luxafor, or any custom webhook endpoint.
 
 ### Notification Detection
 
